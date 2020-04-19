@@ -96,19 +96,8 @@ vec3 chromasphere(vec4 z) {
     vec4 u = z / vec4(r_st, r_st, r_pq, r_pq);
     vec4 u_conj = conj(u);
     
-    // find phase of stereographic projection from south pole
-    vec2 u_north = mat2(u.st, u_conj.ts) * u_conj.pq; // u_st / u_pq
-    
-    // choose lightness
-    float l;
-    if (r_st < r_pq) {
-        // we're in the northern hemisphere
-        l = 100.0/(1.0 + 0.5*pow(r_pq/r_st, 0.3));
-    } else {
-        // we're in the southern hemisphere
-        l = 100.0*(1.0 - 1.0/(1.0 + 2.0*pow(r_st/r_pq, 0.3)));
-    }
-    
+    float l = 100.0*(1.0 - 1.0/(1.0 + 2.0*pow(r_st/r_pq, 0.3)));
+    vec2 u_north = mat2(u.st, u_conj.ts) * u_conj.pq; // u.st / u.pq
     return lab2rgb(vec3(l, appx_chromawheel(l)*u_north));
 }
 

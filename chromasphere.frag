@@ -82,8 +82,11 @@ vec2 rcp(vec2 z) {
 // --- main ---
 
 void main() {
-    float fade = 1.0 + cos(time/2.0);
+    /*float fade = 1.0 + cos(time/2.0);*/
+    /* when `|z|` goes above 150 or so, `z` gets colored black! why? that's
+       way too far from infinity to be having numerical stability problems. */
+    float fade = 1.0 / 150.0;
     vec2 spin = ONE*cos(time) + I*sin(time);
     vec2 z = fade * mul(spin, uv());
-    gl_FragColor = vec4(chromasphere(z), 0.0);
+    gl_FragColor = vec4(chromasphere(rcp(z)), 1.0);
 }

@@ -44,7 +44,7 @@ float appx_chromawheel(in float l) {
     if      (l < lpts[1]) { lbot = lpts[0]; ltop = lpts[1]; cbot = cpts[0]; ctop = cpts[1]; }
     else if (l < lpts[2]) { lbot = lpts[1]; ltop = lpts[2]; cbot = cpts[1]; ctop = cpts[2]; }
     else if (l < lpts[3]) { lbot = lpts[2]; ltop = lpts[3]; cbot = cpts[2]; ctop = cpts[3]; }
-    else                  { lbot = lpts[4]; ltop = lpts[4]; cbot = cpts[4]; ctop = cpts[4]; }
+    else                  { lbot = lpts[3]; ltop = lpts[4]; cbot = cpts[3]; ctop = cpts[4]; }
     float t = (l - lbot) / (ltop - lbot);
     return (1.0-t)*cbot + t*ctop;
 }
@@ -83,8 +83,12 @@ vec2 rcp(vec2 z) {
 
 void main() {
     /*float fade = 1.0 + cos(time/2.0);*/
-    /* when `|z|` goes above 150 or so, `z` gets colored black! why? that's
-       way too far from infinity to be having numerical stability problems. */
+    /* after several hours of hunting for numerical stability problems, i
+       noticed that radius 150 is where the lightness hits 90, and realized
+       that the number 90 sounded familiar. i found the typos in
+       `appx_chromawheel` a minute later.
+       
+       lessons: do unit tests; pay attention to magic numbers. */
     float fade = 1.0 / 150.0;
     vec2 spin = ONE*cos(time) + I*sin(time);
     vec2 z = fade * mul(spin, uv());

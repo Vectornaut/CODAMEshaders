@@ -45,5 +45,5 @@ end
 function show_chromasphere(steps = 16, res = 720)
   Lrange = collect(LinRange(0, 100, 201))
   plot(Lrange, [chromawheel(L, steps, res) for L in Lrange], seriescolor = "deepskyblue", legend = false)
-  plot!(Lrange, appx_chromasphere.(Lrange), seriescolor = "brown1")
+  plot!(Lrange, appx_chromawheel.(Lrange), seriescolor = "brown1")
 end

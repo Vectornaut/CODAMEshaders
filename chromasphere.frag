@@ -60,7 +60,7 @@ vec3 chromasphere(vec2 z) {
     if (in_range(z.x) && in_range(z.y)) {
         float r = length(z);
         vec2 u = z/r;
-        float l = 100.0*(1.0 - 0.5/(0.5 + pow(r, 0.3)));
+        float l = 100.0*(1.0 - 1.0/(1.0 + 2.0*pow(r, 0.3)));
         return lab2rgb(vec3(l, appx_chromawheel(l)*u));
     } else {
         return white;
@@ -91,16 +91,10 @@ vec2 rcp(vec2 z) {
 // --- main ---
 
 void main() {
-    float fade = 1.0 + cos(time/2.0);
-    vec2 spin = ONE*cos(time) + I*sin(time);
-    vec2 z = fade * mul(spin, uv());
-    vec2 w = rcp(z);
-    
-    vec3 color;
-    if (abs(2.0*uvN().x - 1.0) > 0.5) {
-        color = (in_range(w.x) && in_range(w.y)) ? black : white;
-    } else {
-        color = chromasphere(w);
-    }
-    gl_FragColor = vec4(color, 1.0);
+    vec2 root = sin(time)*(ONE*cos(time) + I*sin(time));
+    vec2 z = 1.25*uv();
+    vec2 z_sq = mul(z ,z);
+    vec2 z_cb = mul(z, z_sq);
+    vec2 w = mul(z_sq, rcp(root - z_cb));
+    gl_FragColor = vec4(chromasphere(w), 1.0);
 }

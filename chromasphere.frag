@@ -49,13 +49,22 @@ float appx_chromawheel(in float l) {
     return (1.0-t)*cbot + t*ctop;
 }
 
+// this should return false for +Inf, -Inf, NaN, and enormous numbers
+bool in_range(float t) {
+    return -1.0e38 < t && t < 1.0e38;
+}
+
 // translate a complex number `z` into a color. the lightness shows the absolute
 // value of `z`, and the hue shows the phase of `z`
 vec3 chromasphere(vec2 z) {
-    float r = length(z);
-    vec2 u = z/r;
-    float l = 100.0*(1.0 - 0.5/(0.5 + pow(r, 0.3)));
-    return lab2rgb(vec3(l, appx_chromawheel(l)*u));
+    if (in_range(z.x) && in_range(z.y)) {
+        float r = length(z);
+        vec2 u = z/r;
+        float l = 100.0*(1.0 - 0.5/(0.5 + pow(r, 0.3)));
+        return lab2rgb(vec3(l, appx_chromawheel(l)*u));
+    } else {
+        return white;
+    }
 }
 
 // --- complex arithmetic ---
@@ -82,15 +91,16 @@ vec2 rcp(vec2 z) {
 // --- main ---
 
 void main() {
-    /*float fade = 1.0 + cos(time/2.0);*/
-    /* after several hours of hunting for numerical stability problems, i
-       noticed that radius 150 is where the lightness hits 90, and realized
-       that the number 90 sounded familiar. i found the typos in
-       `appx_chromawheel` a minute later.
-       
-       lessons: do unit tests; pay attention to magic numbers. */
-    float fade = 1.0 / 150.0;
+    float fade = 1.0 + cos(time/2.0);
     vec2 spin = ONE*cos(time) + I*sin(time);
     vec2 z = fade * mul(spin, uv());
-    gl_FragColor = vec4(chromasphere(rcp(z)), 1.0);
+    vec2 w = rcp(z);
+    
+    vec3 color;
+    if (abs(2.0*uvN().x - 1.0) > 0.5) {
+        color = (in_range(w.x) && in_range(w.y)) ? black : white;
+    } else {
+        color = chromasphere(w);
+    }
+    gl_FragColor = vec4(color, 1.0);
 }

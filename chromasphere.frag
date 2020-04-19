@@ -80,7 +80,7 @@ float appx_chromawheel(in float l) {
     if      (l < lpts[1]) { lbot = lpts[0]; ltop = lpts[1]; cbot = cpts[0]; ctop = cpts[1]; }
     else if (l < lpts[2]) { lbot = lpts[1]; ltop = lpts[2]; cbot = cpts[1]; ctop = cpts[2]; }
     else if (l < lpts[3]) { lbot = lpts[2]; ltop = lpts[3]; cbot = cpts[2]; ctop = cpts[3]; }
-    else                  { lbot = lpts[4]; ltop = lpts[4]; cbot = cpts[4]; ctop = cpts[4]; }
+    else                  { lbot = lpts[3]; ltop = lpts[4]; cbot = cpts[3]; ctop = cpts[4]; }
     float t = (l - lbot) / (ltop - lbot);
     return (1.0-t)*cbot + t*ctop;
 }
@@ -118,5 +118,5 @@ void main() {
     float fade = 1.0 + cos(time/2.0);
     vec4 spin = mul(cos(time), ONE) + mul(sin(time), I);
     vec4 z = mul(fade, mul(spin, vec4(uv(), 1.0, 0.0)));
-    gl_FragColor = vec4(chromasphere(z), 0.0);
+    gl_FragColor = vec4(chromasphere(rcp(z)), 0.0);
 }

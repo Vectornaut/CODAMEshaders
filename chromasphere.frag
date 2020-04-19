@@ -85,9 +85,20 @@ float appx_chromawheel(in float l) {
     return (1.0-t)*cbot + t*ctop;
 }
 
+// this should return false for +Inf, -Inf, NaN, and enormous numbers
+bool in_range(float t) {
+    return -1.0e38 < t && t < 1.0e38;
+}
+
 // the color of the point `z` on the riemann sphere. its lightness and hue show
 // the latitude and longitude of `z`
 vec3 chromasphere(vec4 z) {
+    if (!in_range(z.s) || !in_range(z.t) || (z.p == 0.0 && z.q == 0.0)) {
+        return white;
+    } else if (!in_range(z.p) || !in_range(z.q)) {
+        return black;
+    }
+    
     // find lengths of projective coordinates
     float r_st = length(z.st);
     float r_pq = length(z.pq);

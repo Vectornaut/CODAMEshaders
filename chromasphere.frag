@@ -63,14 +63,14 @@ vec3 chromasphere(vec2 z) {
 const vec2 ONE = vec2(1.0, 0.0);
 const vec2 I   = vec2(0.0, 1.0);
 
-// the product of `z` and `w`
-vec2 mul(vec2 z, vec2 w) {
-    return vec2(z.x*w.x - z.y*w.y, z.x*w.y + z.y*w.x);
-}
-
 //  the complex conjugate of `z`
 vec2 conj(vec2 z) {
     return vec2(z.x, -z.y);
+}
+
+// the product of `z` and `w`
+vec2 mul(vec2 z, vec2 w) {
+    return mat2(z, conj(z).yx) * w;
 }
 
 // the reciprocal of `z`

@@ -1,3 +1,39 @@
+// --- riemann sphere ---
+
+// complex arithmetic on the riemann sphere. the vector (s, t, p, q) represents
+// the point with projective coordinates
+//   [ s + i*t : p + i*q ].
+// streographic projection from the south pole maps that to the point
+//   (s + i*t) / (p + i*q)
+// in the complex plane.
+
+const vec4 ONE = vec4(1.0, 0.0, 1.0, 0.0);
+const vec4 I   = vec4(0.0, 1.0, 1.0, 0.0);
+
+//  the complex conjugate of `z`
+vec4 conj(vec4 z) {
+    return vec4(z.s, -z.t, z.p, -z.q);
+}
+
+// the product of a real number `a` with `z`
+vec4 mul(float a, vec4 z) {
+    return vec4(a*z.st, z.pq);
+}
+
+// the product of `z` and `w`
+vec4 mul(vec4 z, vec4 w) {
+    vec4 z_conj = conj(z);
+    return vec4(
+      mat2(z.st, z_conj.ts) * w.st,
+      mat2(z.pq, z_conj.qp) * w.pq
+    );
+}
+
+// the reciprocal of `z`
+vec4 rcp(vec4 z) {
+    return z.pqst;
+}
+
 //----------------------CIE Lab----------------------
 // from nmz's 3d color space visualization
 // https://www.shadertoy.com/view/XddGRN
@@ -49,41 +85,38 @@ float appx_chromawheel(in float l) {
     return (1.0-t)*cbot + t*ctop;
 }
 
-// translate a complex number `z` into a color. the lightness shows the absolute
-// value of `z`, and the hue shows the phase of `z`
-vec3 chromasphere(vec2 z) {
-    float r = length(z);
-    vec2 u = z/r;
-    float l = 100.0*(1.0 - 0.5/(0.5 + pow(r, 0.3)));
-    return lab2rgb(vec3(l, appx_chromawheel(l)*u));
-}
-
-// --- complex arithmetic ---
-
-const vec2 ONE = vec2(1.0, 0.0);
-const vec2 I   = vec2(0.0, 1.0);
-
-//  the complex conjugate of `z`
-vec2 conj(vec2 z) {
-    return vec2(z.x, -z.y);
-}
-
-// the product of `z` and `w`
-vec2 mul(vec2 z, vec2 w) {
-    return mat2(z, conj(z).yx) * w;
-}
-
-// the reciprocal of `z`
-vec2 rcp(vec2 z) {
-    // 1/z = z'/(z'*z) = z'/|z|^2
-    return conj(z) / dot(z, z);
+// the color of the point `z` on the riemann sphere. its lightness and hue show
+// the latitude and longitude of `z`
+vec3 chromasphere(vec4 z) {
+    // find lengths of projective coordinates
+    float r_st = length(z.st);
+    float r_pq = length(z.pq);
+    
+    // find phases of projective coordinates
+    vec4 u = z / vec4(r_st, r_st, r_pq, r_pq);
+    vec4 u_conj = conj(u);
+    
+    // find phase of stereographic projection from south pole
+    vec2 u_north = mat2(u.st, u_conj.ts) * u_conj.pq; // u_st / u_pq
+    
+    // choose lightness
+    float l;
+    if (r_st < r_pq) {
+        // we're in the northern hemisphere
+        l = 100.0/(1.0 + 0.5*pow(r_pq/r_st, 0.3));
+    } else {
+        // we're in the southern hemisphere
+        l = 100.0*(1.0 - 1.0/(1.0 + 2.0*pow(r_st/r_pq, 0.3)));
+    }
+    
+    return lab2rgb(vec3(l, appx_chromawheel(l)*u_north));
 }
 
 // --- main ---
 
 void main() {
     float fade = 1.0 + cos(time/2.0);
-    vec2 spin = ONE*cos(time) + I*sin(time);
-    vec2 z = fade * mul(spin, uv());
+    vec4 spin = mul(cos(time), ONE) + mul(sin(time), I);
+    vec4 z = mul(fade, mul(spin, vec4(uv(), 1.0, 0.0)));
     gl_FragColor = vec4(chromasphere(z), 0.0);
 }

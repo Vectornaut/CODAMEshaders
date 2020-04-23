@@ -1,3 +1,13 @@
+// this sketch shows the color sequence of a cosine palette as a path through
+// the RGB cube---just the RG square, in this case, since i'm keeping the blue
+// level fixed. as expected, the path swoops around inside a rectangle, whose
+// position and dimensions are determined by `a` and `b`.
+
+// if the ratios between the components of `c` are rational, like in Inigo
+// Quilez's examples, the path is a closed loop---a Lissajous curve. if the
+// ratios are irrational, though, the path never comes back to where it started.
+// instead, it fills the rectangle more and more densely.
+
 // palette parameters
 float[] a = {0.5, 0.5};
 float[] b = {0.3, 0.5};

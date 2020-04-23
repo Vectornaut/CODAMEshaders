@@ -1,9 +1,3 @@
-// shape parameters
-float margin = 0.1;
-final int palStep = 2;
-final int palWidth = 720;
-final int swatchWidth = 40;
-
 // palette parameters
 float[] a = {0.5, 0.5};
 float[] b = {0.3, 0.5};
@@ -20,6 +14,12 @@ color mid_color;
 // monitor buffers
 PGraphics path;
 PGraphics palette;
+
+// shape parameters
+float margin = 0.1;
+final int palStep = 2;
+final int palWidth = 720;
+final int swatchWidth = 40;
 
 // shape information
 int palHeight;

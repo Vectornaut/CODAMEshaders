@@ -20,8 +20,8 @@ const int steps = 256;
 const float eps = 0.001;
 const float horizon = 30.0;
 
-float haze(float r) {
-    return 1.0/(1.0 + 0.2*r);
+float attenuation(float r) {
+    return exp(-r/10.);
 }
 
 vec3 ray_color(vec3 dir) {
@@ -38,9 +38,9 @@ vec3 ray_color(vec3 dir) {
         // march
         if (dist < eps) {
             if (sphere_dist < eps) {
-                return vec3(1.0, 0.0, 0.0) * haze(r);
+                return vec3(1.0, 0.0, 0.0) * attenuation(r);
             } else {
-                return vec3(haze(r));
+                return vec3(attenuation(r));
             }
         } else if (r > horizon) {
             return vec3(0.0);

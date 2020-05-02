@@ -1,9 +1,15 @@
 // a study copy of Char Stiles's ray-marching example from the May 2 CODAME
 // workshop.
+//
 //   https://gist.github.com/CharStiles/2e5889a660b8c7cbf8d1e0b5ff4bf1e4
-// i switched to an atmospheric perspective function that didn't depend on the
-// horizon so i could turn up the horizon distance without washing out the
-// colors
+//
+// i've redone the atmospheric perspective, letting distant objects fade out
+// exponentially like they would if you were seeing them through air.
+//
+//   Srinivasa Narasimhan and Shree Nayar
+//   "Contrast restoration of weather degraded images"
+//
+// that lets me turn up the horizon distance without washing out the colors
 
 // --- scene ---
 
@@ -26,8 +32,8 @@ const int steps = 256;
 const float eps = 0.001;
 const float horizon = 30.0;
 
-float haze(float r) {
-    return 1.0/(1.0 + 0.2*r);
+float attenuation(float r) {
+    return exp(-r/10.);
 }
 
 float ray_color(vec3 dir) {
@@ -35,7 +41,7 @@ float ray_color(vec3 dir) {
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
         float dist = scene_sdf(r*dir);
         if (dist < eps) {
-            return haze(r);
+            return attenuation(r);
         } else if (r > horizon) {
             return 0.0;
         } else {

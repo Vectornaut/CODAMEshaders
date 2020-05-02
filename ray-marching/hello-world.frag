@@ -1,8 +1,16 @@
+// a study copy of Char Stiles's ray-marching example from the May 2 CODAME
+// workshop.
+//   https://gist.github.com/CharStiles/2e5889a660b8c7cbf8d1e0b5ff4bf1e4
+// i switched to an atmospheric perspective function that didn't depend on the
+// horizon so i could turn up the horizon distance without washing out the
+// colors
+
 // --- scene ---
 
-float scene_dist(vec3 pos) {
+const vec3 sphere_pos = vec3(0.0, 0.0, -3.0);
+
+float scene_sdf(vec3 pos) {
     // sphere
-    vec3 sphere_pos = vec3(0.0, 0.0, -3.0);
     float sphere_dist = length(pos - sphere_pos) - 1.0;
     
     // ground
@@ -25,7 +33,7 @@ float haze(float r) {
 float ray_color(vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
-        float dist = scene_dist(r*dir);
+        float dist = scene_sdf(r*dir);
         if (dist < eps) {
             return haze(r);
         } else if (r > horizon) {

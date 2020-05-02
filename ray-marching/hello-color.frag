@@ -1,3 +1,6 @@
+// another study copy of Char's ray-marching example. i gave `ray_color` access
+// to the individual object SDFs so it could see what it had hit
+
 // --- scene ---
 
 const vec3 sphere_pos = vec3(0.0, 0.0, -3.0);

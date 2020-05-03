@@ -37,6 +37,9 @@ aug_dist max(aug_dist a, aug_dist b) {
 
 const vec3 poly_color = vec3(1.0);
 
+// the reflection across the dual plane of the unit vector n
+#define REFLECTION(n) mat3(1.) - 2.*mat3(n.x*n, n.y*n, n.z*n)
+
 aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
     return aug_dist(
         dot(p, normal) - offset,
@@ -84,13 +87,50 @@ aug_dist enum_octa_sdf(vec3 p_scene) {
     return dist;
 }
 
-// the golden rectangle formed by four vertices of an icosahedron
+// a vertex of an icosahedron and the midpoints of its opposite edges
 const float phi = (1.+sqrt(5.))/2.;
-const float prim_len = sqrt(2.+phi);
-const vec3 n00 = vec3(0,  1.,  phi) / prim_len;
-const vec3 n01 = vec3(0,  1., -phi) / prim_len;
-const vec3 n10 = vec3(0, -1.,  phi) / prim_len;
-const vec3 n11 = vec3(0, -1., -phi) / prim_len;
+const float n_len = sqrt(2.+phi);
+const vec3 n0 = vec3(0,  1.,  phi) / n_len;
+const float s_len = 2.*phi;
+const vec3 s1 = vec3(    phi, -1.    , 1.+phi) / s_len;
+const vec3 s2 = vec3( 1.+phi,     phi, 1.    ) / s_len;
+const vec3 s3 = vec3( 0.,      1.    , 0.    );
+const vec3 s4 = vec3(-1.-phi,     phi, 1.    ) / s_len;
+const vec3 s5 = vec3(   -phi, -1.    , 1.+phi) / s_len;
+
+// the reflections across the dual planes of the vertices above
+const mat3 r1 = REFLECTION(s1);
+const mat3 r2 = REFLECTION(s2);
+const mat3 r3 = REFLECTION(s3);
+const mat3 r4 = REFLECTION(s4);
+const mat3 r5 = REFLECTION(s5);
+
+aug_dist refl_dodeca_sdf(vec3 p_scene) {
+    vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
+    mat3 orient = euler_rot(attitude);
+    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
+    
+    // find a symmetry that takes p into the face dual to n0, applying it to p
+    // as we go. its inverse takes n0 to the normal of the face closest to p
+    mat3 p_to_face0 = mat3(1.);
+    for (int cnt = 0; cnt < 2; cnt++) {
+        if (dot(s1, p) < 0.) { p = r1 * p; p_to_face0 = r1 * p_to_face0; }
+        if (dot(s2, p) < 0.) { p = r2 * p; p_to_face0 = r2 * p_to_face0; }
+        if (dot(s3, p) < 0.) { p = r3 * p; p_to_face0 = r3 * p_to_face0; }
+        if (dot(s4, p) < 0.) { p = r4 * p; p_to_face0 = r4 * p_to_face0; }
+        if (dot(s5, p) < 0.) { p = r5 * p; p_to_face0 = r5 * p_to_face0; }
+    }
+    
+    aug_dist dist = plane_sdf(p, n0, 1.);
+    dist.normal = orient * (dist.normal * p_to_face0);
+    return dist;
+}
+
+// the golden rectangle formed by four vertices of an icosahedron
+const vec3 n00 = vec3(0,  1.,  phi) / n_len;
+const vec3 n01 = vec3(0,  1., -phi) / n_len;
+const vec3 n10 = vec3(0, -1.,  phi) / n_len;
+const vec3 n11 = vec3(0, -1., -phi) / n_len;
 
 aug_dist table_dodeca_sdf(vec3 p_scene) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
@@ -156,7 +196,7 @@ vec3 radiance(aug_dist dist) {
 vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
-        aug_dist poly = table_dodeca_sdf(place + r*dir);
+        aug_dist poly = refl_dodeca_sdf(place + r*dir);
         if (poly.dist < eps) {
             return radiance(poly);
         } else if (r > horizon) {

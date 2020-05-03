@@ -54,11 +54,15 @@ aug_dist refl_octa_sdf(vec3 p_scene) {
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
-    vec3 normal = vec3(1., 1., 1.);
-    normal /= length(normal);
+    // take the side normal in the positive orthant
+    vec3 normal = vec3(1., 1., 1.) / sqrt(3.);
+    
+    // reflect it into the orthant of p
     for (int k = 0; k < 3; k++) {
         if (p[k] < 0.) normal[k] = -normal[k];
     }
+    
+    // now it's the normal of the side closest to p
     aug_dist dist = plane_sdf(p, normal, 1.);
     dist.normal = orient * dist.normal;
     return dist;
@@ -87,46 +91,36 @@ aug_dist enum_octa_sdf(vec3 p_scene) {
     return dist;
 }
 
-// a vertex of an icosahedron and the midpoints of its opposite edges
 const float phi = (1.+sqrt(5.))/2.;
-const float n_len = sqrt(2.+phi);
-const vec3 n0 = vec3(0,  1.,  phi) / n_len;
-const float s_len = 2.*phi;
-const vec3 s1 = vec3(    phi, -1.    , 1.+phi) / s_len;
-const vec3 s2 = vec3( 1.+phi,     phi, 1.    ) / s_len;
-const vec3 s3 = vec3( 0.,      1.    , 0.    );
-const vec3 s4 = vec3(-1.-phi,     phi, 1.    ) / s_len;
-const vec3 s5 = vec3(   -phi, -1.    , 1.+phi) / s_len;
-
-// the reflections across the dual planes of the vertices above
-const mat3 r1 = REFLECTION(s1);
-const mat3 r2 = REFLECTION(s2);
-const mat3 r3 = REFLECTION(s3);
-const mat3 r4 = REFLECTION(s4);
-const mat3 r5 = REFLECTION(s5);
 
 aug_dist refl_dodeca_sdf(vec3 p_scene) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
-    // find a symmetry that takes p into the face dual to n0, applying it to p
-    // as we go. its inverse takes n0 to the normal of the face closest to p
-    mat3 p_to_face0 = mat3(1.);
-    for (int cnt = 0; cnt < 2; cnt++) {
-        if (dot(s1, p) < 0.) { p = r1 * p; p_to_face0 = r1 * p_to_face0; }
-        if (dot(s2, p) < 0.) { p = r2 * p; p_to_face0 = r2 * p_to_face0; }
-        if (dot(s3, p) < 0.) { p = r3 * p; p_to_face0 = r3 * p_to_face0; }
-        if (dot(s4, p) < 0.) { p = r4 * p; p_to_face0 = r4 * p_to_face0; }
-        if (dot(s5, p) < 0.) { p = r5 * p; p_to_face0 = r5 * p_to_face0; }
+    // take the side normals in the positive orthant
+    vec3 n = vec3(0., 1., phi) / sqrt(2.+phi);
+    mat3 normals = mat3(n, n.zxy, n.yzx);
+    
+    // reflect them into the orthant of p
+    for (int k = 0; k < 3; k++) {
+        if (p[k] < 0.) {
+            for (int j = 0; j < 3; j++) {
+                normals[j][k] = -normals[j][k];
+            }
+        }
     }
     
-    aug_dist dist = plane_sdf(p, n0, 1.);
-    dist.normal = orient * (dist.normal * p_to_face0);
+    // now, one of them is the normal of the side closest to p
+    aug_dist dist =  plane_sdf(p, normals[0], 1.);
+    dist = max(dist, plane_sdf(p, normals[1], 1.));
+    dist = max(dist, plane_sdf(p, normals[2], 1.));
+    dist.normal = orient * dist.normal;
     return dist;
 }
 
 // the golden rectangle formed by four vertices of an icosahedron
+const float n_len = sqrt(2.+phi);
 const vec3 n00 = vec3(0,  1.,  phi) / n_len;
 const vec3 n01 = vec3(0,  1., -phi) / n_len;
 const vec3 n10 = vec3(0, -1.,  phi) / n_len;

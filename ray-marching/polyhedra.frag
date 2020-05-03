@@ -10,7 +10,7 @@ mat3 rot_xy(float t) {
 
 mat3 rot_yz(float t) {
     return mat3(
-        0.1,     0.0,    0.0,
+        1.0,     0.0,    0.0,
         0.0,  cos(t), sin(t),
         0.0, -sin(t), cos(t)
     );
@@ -53,7 +53,12 @@ aug_dist octa_sdf(vec3 p) {
     return plane_sdf(p, normal, 1.);
 }
 
-aug_dist alt_octa_sdf(vec3 p) {
+aug_dist alt_octa_sdf(vec3 ray_pos) {
+    /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
+    vec3 attitude = vec3(0.0, 0.3*PI, 0.1*time);
+    mat3 orient = euler_rot(attitude.x, attitude.y, attitude.z);
+    vec3 p = ray_pos * orient; // = transpose(orient) * ray_pos
+    
     aug_dist dist = aug_dist(0., vec3(0.), vec3(0.));
     vec3 normal = vec3(1., 1., 1.);
     normal /= length(normal);
@@ -67,6 +72,7 @@ aug_dist alt_octa_sdf(vec3 p) {
         }
         normal.x = -normal.x;
     }
+    dist.normal = orient * dist.normal;
     return dist;
 }
 
@@ -133,7 +139,7 @@ vec3 radiance(aug_dist dist) {
 vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
-        aug_dist poly = dodeca_sdf(place + r*dir);
+        aug_dist poly = alt_octa_sdf(place + r*dir);
         if (poly.dist < eps) {
             return radiance(poly);
         } else if (r > horizon) {

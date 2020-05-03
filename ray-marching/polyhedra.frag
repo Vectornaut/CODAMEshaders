@@ -45,9 +45,8 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
     );
 }
 
-aug_dist refl_octa_sdf(vec3 p_scene) {
-    /*vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);*/
-    vec3 attitude = vec3(0.0);
+aug_dist octa_sdf(vec3 p_scene) {
+    vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
@@ -65,32 +64,9 @@ aug_dist refl_octa_sdf(vec3 p_scene) {
     return dist;
 }
 
-aug_dist enum_octa_sdf(vec3 p_scene) {
-    /*vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);*/
-    vec3 attitude = vec3(0.0);
-    mat3 orient = euler_rot(attitude);
-    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
-    
-    aug_dist dist = aug_dist(-1e2, vec3(0.), vec3(1., 0., 0.));
-    vec3 normal = vec3(1., 1., 1.);
-    normal /= length(normal);
-    for (int sgn_x = 0; sgn_x < 2; sgn_x++) {
-        for (int sgn_y = 0; sgn_y < 2; sgn_y++) {
-            for (int sgn_z = 0; sgn_z < 2; sgn_z++) {
-                dist = max(dist, plane_sdf(p, normal, 1.0));
-                normal.z = -normal.z;
-            }
-            normal.y = -normal.y;
-        }
-        normal.x = -normal.x;
-    }
-    dist.normal = orient * dist.normal;
-    return dist;
-}
-
 const float phi = (1.+sqrt(5.))/2.;
 
-aug_dist refl_dodeca_sdf(vec3 p_scene) {
+aug_dist dodeca_sdf(vec3 p_scene) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -116,62 +92,6 @@ aug_dist refl_dodeca_sdf(vec3 p_scene) {
     return dist;
 }
 
-// the golden rectangle formed by four vertices of an icosahedron
-const float n_len = sqrt(2.+phi);
-const vec3 n00 = vec3(0,  1.,  phi) / n_len;
-const vec3 n01 = vec3(0,  1., -phi) / n_len;
-const vec3 n10 = vec3(0, -1.,  phi) / n_len;
-const vec3 n11 = vec3(0, -1., -phi) / n_len;
-
-aug_dist table_dodeca_sdf(vec3 p_scene) {
-    vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
-    mat3 orient = euler_rot(attitude);
-    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
-    
-    // yz rectangle
-    aug_dist dist =  plane_sdf(p, n00, 1.0);
-    dist = max(dist, plane_sdf(p, n01, 1.0));
-    dist = max(dist, plane_sdf(p, n10, 1.0));
-    dist = max(dist, plane_sdf(p, n11, 1.0));
-    
-    // xy rectangle
-    dist = max(dist, plane_sdf(p, n00.yzx, 1.0));
-    dist = max(dist, plane_sdf(p, n01.yzx, 1.0));
-    dist = max(dist, plane_sdf(p, n10.yzx, 1.0));
-    dist = max(dist, plane_sdf(p, n11.yzx, 1.0));
-    
-    // zx rectangle
-    dist = max(dist, plane_sdf(p, n00.zxy, 1.0));
-    dist = max(dist, plane_sdf(p, n01.zxy, 1.0));
-    dist = max(dist, plane_sdf(p, n10.zxy, 1.0));
-    dist = max(dist, plane_sdf(p, n11.zxy, 1.0));
-    
-    dist.normal = orient * dist.normal;
-    return dist;
-}
-
-aug_dist enum_dodeca_sdf(vec3 p_scene) {
-    vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
-    mat3 orient = euler_rot(attitude);
-    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
-    
-    aug_dist dist = aug_dist(-1e2, vec3(0.), vec3(1., 0., 0.));
-    vec3 normal = vec3(0, 1.0, phi);
-    normal /= length(normal);
-    for (int sgn_y = 0; sgn_y < 2; sgn_y++) {
-        for (int sgn_z = 0; sgn_z < 2; sgn_z++) {
-            for (int cyc = 0; cyc < 3; cyc++) {
-                dist = max(dist, plane_sdf(p, normal, 1.0));
-                normal = normal.yzx;
-            }
-            normal.z = -normal.z;
-        }
-        normal.y = -normal.y;
-    }
-    dist.normal = orient * dist.normal;
-    return dist;
-}
-
 // --- marcher ---
 
 const int steps = 256;
@@ -187,7 +107,12 @@ vec3 radiance(aug_dist dist) {
 vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
-        aug_dist poly = refl_dodeca_sdf(place + r*dir);
+        aug_dist poly;
+        if (mod(time, 20.) < 10.) {
+            poly = octa_sdf(place + r*dir);
+        } else {
+            poly = dodeca_sdf(place + r*dir);
+        }
         if (poly.dist < eps) {
             return radiance(poly);
         } else if (r > horizon) {

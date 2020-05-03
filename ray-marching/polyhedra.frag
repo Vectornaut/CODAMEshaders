@@ -47,7 +47,7 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
 
 aug_dist octa_sdf(vec3 p_scene) {
     /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
-    vec3 attitude = vec3(0.0, 0.3*PI, 0.1*time);
+    vec3 attitude = vec3(0.0);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
@@ -63,7 +63,7 @@ aug_dist octa_sdf(vec3 p_scene) {
 
 aug_dist alt_octa_sdf(vec3 p_scene) {
     /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
-    vec3 attitude = vec3(0.0, 0.3*PI, 0.1*time);
+    vec3 attitude = vec3(0.0);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
@@ -92,8 +92,7 @@ const vec3 n10 = vec3(0, -1.0,  1.618033988749895) / 1.902113032590307;
 const vec3 n11 = vec3(0, -1.0, -1.618033988749895) / 1.902113032590307;
 
 aug_dist dodeca_sdf(vec3 p_scene) {
-    /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
-    vec3 attitude = vec3(0.0, 0.1*time, 0.0);
+    vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
@@ -122,8 +121,7 @@ aug_dist dodeca_sdf(vec3 p_scene) {
 const float phi = 1.618033988749895;
 
 aug_dist alt_dodeca_sdf(vec3 p_scene) {
-    /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
-    vec3 attitude = vec3(0.0, 0.1*time, 0.0);
+    vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
@@ -176,7 +174,16 @@ vec3 ray_color(vec3 place, vec3 dir) {
 const vec3 place = vec3(0.0, 0.0, 6.0);
 
 void main() {
-    vec3 dir = vec3(uv(), -3.5);
-    dir /= length(dir);
-    gl_FragColor = vec4(ray_color(place, dir), 1.0);
+    vec2 jiggle = vec2(0.5/resolution.y);
+    vec3 color_sum = vec3(0.);
+    for (int sgn_x = 0; sgn_x < 2; sgn_x++) {
+        for (int sgn_y = 0; sgn_y < 2; sgn_y++) {
+            vec3 dir = vec3(uv() + jiggle, -3.5);
+            dir /= length(dir);
+            color_sum += ray_color(place, dir);
+            jiggle.y = -jiggle.y;
+        }
+        jiggle.x = -jiggle.x;
+    }
+    gl_FragColor = vec4(color_sum/4., 1.);
 }

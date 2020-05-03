@@ -37,9 +37,6 @@ aug_dist max(aug_dist a, aug_dist b) {
 
 const vec3 poly_color = vec3(1.0);
 
-// the reflection across the dual plane of the unit vector n
-#define REFLECTION(n) mat3(1.) - 2.*mat3(n.x*n, n.y*n, n.z*n)
-
 aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
     return aug_dist(
         dot(p, normal) - offset,

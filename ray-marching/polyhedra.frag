@@ -16,8 +16,9 @@ mat3 rot_yz(float t) {
     );
 }
 
-mat3 euler_rot(float precession, float nutation, float spin) {
-    return rot_xy(precession) * rot_yz(nutation) * rot_xy(spin);
+// attitude = vec3(precession, nutation spin)
+mat3 euler_rot(vec3 attitude) {
+    return rot_xy(attitude[0]) * rot_yz(attitude[1]) * rot_xy(attitude[2]);
 }
 
 // --- augmented signed distances ---
@@ -44,20 +45,27 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
     );
 }
 
-aug_dist octa_sdf(vec3 p) {
+aug_dist octa_sdf(vec3 p_scene) {
+    /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
+    vec3 attitude = vec3(0.0, 0.3*PI, 0.1*time);
+    mat3 orient = euler_rot(attitude);
+    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
+    
     vec3 normal = vec3(1., 1., 1.);
     normal /= length(normal);
     for (int k = 0; k < 3; k++) {
         if (p[k] < 0.) normal[k] = -normal[k];
     }
-    return plane_sdf(p, normal, 1.);
+    aug_dist dist = plane_sdf(p, normal, 1.);
+    dist.normal = orient * dist.normal;
+    return dist;
 }
 
-aug_dist alt_octa_sdf(vec3 ray_pos) {
+aug_dist alt_octa_sdf(vec3 p_scene) {
     /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
     vec3 attitude = vec3(0.0, 0.3*PI, 0.1*time);
-    mat3 orient = euler_rot(attitude.x, attitude.y, attitude.z);
-    vec3 p = ray_pos * orient; // = transpose(orient) * ray_pos
+    mat3 orient = euler_rot(attitude);
+    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
     aug_dist dist = aug_dist(0., vec3(0.), vec3(0.));
     vec3 normal = vec3(1., 1., 1.);
@@ -83,7 +91,12 @@ const vec3 n01 = vec3(0,  1.0, -1.618033988749895) / 1.902113032590307;
 const vec3 n10 = vec3(0, -1.0,  1.618033988749895) / 1.902113032590307;
 const vec3 n11 = vec3(0, -1.0, -1.618033988749895) / 1.902113032590307;
 
-aug_dist dodeca_sdf(vec3 p) {
+aug_dist dodeca_sdf(vec3 p_scene) {
+    /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
+    vec3 attitude = vec3(0.0, 0.1*time, 0.0);
+    mat3 orient = euler_rot(attitude);
+    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
+    
     // yz rectangle
     aug_dist dist =  plane_sdf(p, n00, 1.0);
     dist = max(dist, plane_sdf(p, n01, 1.0));
@@ -102,12 +115,18 @@ aug_dist dodeca_sdf(vec3 p) {
     dist = max(dist, plane_sdf(p, n10.zxy, 1.0));
     dist = max(dist, plane_sdf(p, n11.zxy, 1.0));
     
+    dist.normal = orient * dist.normal;
     return dist;
 }
 
 const float phi = 1.618033988749895;
 
-aug_dist alt_dodeca_sdf(vec3 p) {
+aug_dist alt_dodeca_sdf(vec3 p_scene) {
+    /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
+    vec3 attitude = vec3(0.0, 0.1*time, 0.0);
+    mat3 orient = euler_rot(attitude);
+    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
+    
     aug_dist dist = aug_dist(0., vec3(0.), vec3(0.));
     vec3 normal = vec3(0, 1.0, phi);
     normal /= length(normal);
@@ -121,6 +140,7 @@ aug_dist alt_dodeca_sdf(vec3 p) {
         }
         normal.y = -normal.y;
     }
+    dist.normal = orient * dist.normal;
     return dist;
 }
 
@@ -139,7 +159,7 @@ vec3 radiance(aug_dist dist) {
 vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
-        aug_dist poly = alt_octa_sdf(place + r*dir);
+        aug_dist poly = alt_dodeca_sdf(place + r*dir);
         if (poly.dist < eps) {
             return radiance(poly);
         } else if (r > horizon) {

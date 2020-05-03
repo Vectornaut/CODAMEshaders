@@ -45,8 +45,8 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
     );
 }
 
-aug_dist octa_sdf(vec3 p_scene) {
-    /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
+aug_dist refl_octa_sdf(vec3 p_scene) {
+    /*vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);*/
     vec3 attitude = vec3(0.0);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -61,8 +61,8 @@ aug_dist octa_sdf(vec3 p_scene) {
     return dist;
 }
 
-aug_dist alt_octa_sdf(vec3 p_scene) {
-    /*vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);*/
+aug_dist enum_octa_sdf(vec3 p_scene) {
+    /*vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);*/
     vec3 attitude = vec3(0.0);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -84,15 +84,16 @@ aug_dist alt_octa_sdf(vec3 p_scene) {
     return dist;
 }
 
-// 1.618... is the golden ratio
-// dividing by 1.902... gives a unit vector
-const vec3 n00 = vec3(0,  1.0,  1.618033988749895) / 1.902113032590307;
-const vec3 n01 = vec3(0,  1.0, -1.618033988749895) / 1.902113032590307;
-const vec3 n10 = vec3(0, -1.0,  1.618033988749895) / 1.902113032590307;
-const vec3 n11 = vec3(0, -1.0, -1.618033988749895) / 1.902113032590307;
+// the golden rectangle formed by four vertices of an icosahedron
+const float phi = (1.+sqrt(5.))/2.;
+const float prim_len = sqrt(2.+phi);
+const vec3 n00 = vec3(0,  1.,  phi) / prim_len;
+const vec3 n01 = vec3(0,  1., -phi) / prim_len;
+const vec3 n10 = vec3(0, -1.,  phi) / prim_len;
+const vec3 n11 = vec3(0, -1., -phi) / prim_len;
 
-aug_dist dodeca_sdf(vec3 p_scene) {
-    vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);
+aug_dist table_dodeca_sdf(vec3 p_scene) {
+    vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
@@ -118,10 +119,8 @@ aug_dist dodeca_sdf(vec3 p_scene) {
     return dist;
 }
 
-const float phi = 1.618033988749895;
-
-aug_dist alt_dodeca_sdf(vec3 p_scene) {
-    vec3 attitude = vec3(0.231597640013215, 0.312798310678372, 0.5) * vec3(time);
+aug_dist enum_dodeca_sdf(vec3 p_scene) {
+    vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
@@ -157,7 +156,7 @@ vec3 radiance(aug_dist dist) {
 vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
-        aug_dist poly = alt_dodeca_sdf(place + r*dir);
+        aug_dist poly = table_dodeca_sdf(place + r*dir);
         if (poly.dist < eps) {
             return radiance(poly);
         } else if (r > horizon) {

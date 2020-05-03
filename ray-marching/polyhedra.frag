@@ -67,7 +67,7 @@ aug_dist alt_octa_sdf(vec3 p_scene) {
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
-    aug_dist dist = aug_dist(0., vec3(0.), vec3(0.));
+    aug_dist dist = aug_dist(-1e2, vec3(0.), vec3(1., 0., 0.));
     vec3 normal = vec3(1., 1., 1.);
     normal /= length(normal);
     for (int sgn_x = 0; sgn_x < 2; sgn_x++) {
@@ -127,7 +127,7 @@ aug_dist alt_dodeca_sdf(vec3 p_scene) {
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
-    aug_dist dist = aug_dist(0., vec3(0.), vec3(0.));
+    aug_dist dist = aug_dist(-1e2, vec3(0.), vec3(1., 0., 0.));
     vec3 normal = vec3(0, 1.0, phi);
     normal /= length(normal);
     for (int sgn_y = 0; sgn_y < 2; sgn_y++) {

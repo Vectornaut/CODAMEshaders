@@ -72,8 +72,10 @@ aug_dist dodeca_sdf(vec3 p_scene) {
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
     // take the side normals in the positive orthant
-    vec3 n = vec3(0., 1., phi) / sqrt(2.+phi);
-    mat3 normals = mat3(n, n.zxy, n.yzx);
+    vec3 normals [3];
+    normals[0] = vec3(0., 1., phi) / sqrt(2.+phi);
+    normals[1] = normals[0].zxy;
+    normals[2] = normals[1].zxy;
     
     // reflect them into the orthant of p
     for (int k = 0; k < 3; k++) {
@@ -88,6 +90,36 @@ aug_dist dodeca_sdf(vec3 p_scene) {
     aug_dist dist =  plane_sdf(p, normals[0], 1.);
     dist = max(dist, plane_sdf(p, normals[1], 1.));
     dist = max(dist, plane_sdf(p, normals[2], 1.));
+    dist.normal = orient * dist.normal;
+    return dist;
+}
+
+aug_dist icosa_sdf(vec3 p_scene) {
+    vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
+    mat3 orient = euler_rot(attitude);
+    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
+    
+    // take the side normals in the positive orthant
+    vec3 normals [4];
+    normals[0] = vec3(1.) / sqrt(3.);
+    normals[1] = vec3(0., phi-1., phi) / sqrt(3.);
+    normals[2] = normals[1].zxy;
+    normals[3] = normals[2].zxy;
+    
+    // reflect them into the orthant of p
+    for (int k = 0; k < 3; k++) {
+        if (p[k] < 0.) {
+            for (int j = 0; j < 4; j++) {
+                normals[j][k] = -normals[j][k];
+            }
+        }
+    }
+    
+    // now, one of them is the normal of the side closest to p
+    aug_dist dist =  plane_sdf(p, normals[0], 1.);
+    for (int j = 1; j < 4; j++) {
+        dist = max(dist, plane_sdf(p, normals[j], 1.));
+    }
     dist.normal = orient * dist.normal;
     return dist;
 }
@@ -108,10 +140,13 @@ vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
         aug_dist poly;
-        if (mod(time, 20.) < 10.) {
+        float selector = mod(time, 30.);
+        if (selector < 10.) {
             poly = octa_sdf(place + r*dir);
-        } else {
+        } else if (selector < 20.) {
             poly = dodeca_sdf(place + r*dir);
+        } else {
+            poly = icosa_sdf(place + r*dir);
         }
         if (poly.dist < eps) {
             return radiance(poly);

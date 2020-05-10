@@ -150,19 +150,55 @@ aug_dist icosa_sdf(vec3 p_scene) {
     return dist;
 }
 
+//----------------------CIE Lab----------------------
+// from nmz's 3d color space visualization
+// https://www.shadertoy.com/view/XddGRN
+
+// map colors from Lab space to RGB space. see explore-lab/explore-lab-l.frag
+// to learn more
+
+const vec3 wref =  vec3(.95047, 1.0, 1.08883);
+
+float xyzR(float t){ return mix(t*t*t , 0.1284185*(t - 0.139731), step(t,0.20689655)); }
+
+vec3 lab2rgb(in vec3 c)
+{   
+    float lg = 1./116.*(c.x + 16.);
+    vec3 xyz = vec3(wref.x*xyzR(lg + 0.002*c.y),
+                    wref.y*xyzR(lg),
+                    wref.z*xyzR(lg - 0.005*c.z));
+    vec3 rgb = xyz*mat3( 3.2406, -1.5372,-0.4986,
+                        -0.9689,  1.8758, 0.0415,
+                         0.0557, -0.2040, 1.0570);
+    return rgb;
+}
+
 // --- marcher ---
 
 const int steps = 256;
 const float eps = 0.001;
 const float horizon = 30.0;
 
-const vec3 sky_color = vec3(0.3, 0.5, 0.6);
+vec2 cis(float angle) {
+    return vec2(cos(angle), sin(angle));
+}
 
-vec3 radiance(aug_dist dist) {
-    return (0.5 + 0.5*dot(dist.normal, vec3(1.0)/sqrt(3.0))) * dist.color;
+vec3 radiance(aug_dist dist, vec3 sky_color) {
+    return mix(sky_color, dist.color, (1.+dot(dist.normal, vec3(1.0)/sqrt(3.0)))/2.);
 }
 
 vec3 ray_color(vec3 place, vec3 dir) {
+    // easing functions
+    float t = time*PI2/40.;
+    vec2 cis_t = cis(t);
+    vec2 easing = sign(cis_t)*pow(cis_t, vec2(0.4));
+    
+    // at lightness 51, an RGB monitor can display all colors with chroma <=
+    // 29.94. you can verify this with the `chromawheel` function in
+    // `find-chromasphere.jl`. a square with half-side 21 fits comfortably
+    // within that wheel
+    vec3 sky_color = lab2rgb(vec3(51., 21.*easing));
+    
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
         vec3 p_scene = place + r*dir;
@@ -178,7 +214,7 @@ vec3 ray_color(vec3 place, vec3 dir) {
             poly = icosa_sdf(p_scene);
         }
         if (poly.dist < eps) {
-            return radiance(poly);
+            return radiance(poly, sky_color);
         } else if (r > horizon) {
             return sky_color;
         } else {

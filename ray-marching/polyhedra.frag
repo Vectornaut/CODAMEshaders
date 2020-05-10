@@ -63,7 +63,7 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
 //   https://www.iquilezles.org/www/articles/boxfunctions/boxfunctions.htm
 //
 // but different. in particular, this one is only a bound
-aug_dist cube_sdf(vec3 p_scene) {
+aug_dist cube_sdf(vec3 p_scene, float size) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -75,13 +75,13 @@ aug_dist cube_sdf(vec3 p_scene) {
         p_abs.z >= p_abs.x && p_abs.z >= p_abs.y ? 1. : 0.
     );
     return aug_dist(
-        argmax(p_abs - vec3(1.)),
+        argmax(p_abs - vec3(size)),
         orient * normal,
         poly_color
     );
 }
 
-aug_dist octa_sdf(vec3 p_scene) {
+aug_dist octa_sdf(vec3 p_scene, float size) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -93,14 +93,14 @@ aug_dist octa_sdf(vec3 p_scene) {
     normal *= msign(p);
     
     // now it's the normal of the side closest to p
-    aug_dist dist = plane_sdf(p, normal, 1.);
+    aug_dist dist = plane_sdf(p, normal, size);
     dist.normal = orient * dist.normal;
     return dist;
 }
 
 const float phi = (1.+sqrt(5.))/2.;
 
-aug_dist dodeca_sdf(vec3 p_scene) {
+aug_dist dodeca_sdf(vec3 p_scene, float size) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -117,14 +117,14 @@ aug_dist dodeca_sdf(vec3 p_scene) {
     }
     
     // now, one of them is the normal of the side closest to p
-    aug_dist dist =  plane_sdf(p, normals[0], 1.);
-    dist = max(dist, plane_sdf(p, normals[1], 1.));
-    dist = max(dist, plane_sdf(p, normals[2], 1.));
+    aug_dist dist =  plane_sdf(p, normals[0], size);
+    dist = max(dist, plane_sdf(p, normals[1], size));
+    dist = max(dist, plane_sdf(p, normals[2], size));
     dist.normal = orient * dist.normal;
     return dist;
 }
 
-aug_dist icosa_sdf(vec3 p_scene) {
+aug_dist icosa_sdf(vec3 p_scene, float size) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -142,9 +142,9 @@ aug_dist icosa_sdf(vec3 p_scene) {
     }
     
     // now, one of them is the normal of the side closest to p
-    aug_dist dist =  plane_sdf(p, normals[0], 1.);
+    aug_dist dist =  plane_sdf(p, normals[0], size);
     for (int j = 1; j < 4; j++) {
-        dist = max(dist, plane_sdf(p, normals[j], 1.));
+        dist = max(dist, plane_sdf(p, normals[j], size));
     }
     dist.normal = orient * dist.normal;
     return dist;
@@ -179,25 +179,41 @@ const int steps = 256;
 const float eps = 0.001;
 const float horizon = 30.0;
 
-vec2 cis(float angle) {
-    return vec2(cos(angle), sin(angle));
+float quart(float t) {
+    t *= t;
+    t *= t;
+    return t;
 }
+
+float smoothstair(float t, float n) { return t + sin(n*t)/n; }
+
+float triplestair(float t, float n) {
+    for (int cnt = 0; cnt < 3; cnt++) {
+        t = smoothstair(t, n);
+    }
+    return t;
+}
+
+vec2 cis(float t) { return vec2(cos(t), sin(t)); }
 
 vec3 radiance(aug_dist dist, vec3 sky_color) {
     return mix(sky_color, dist.color, (1.+dot(dist.normal, vec3(1.0)/sqrt(3.0)))/2.);
 }
 
 vec3 ray_color(vec3 place, vec3 dir) {
-    // easing functions
+    // easing function
     float t = time*PI2/40.;
-    vec2 cis_t = cis(t);
-    vec2 easing = sign(cis_t)*pow(cis_t, vec2(0.4));
+    float pop = quart((1. + cos(4.*t)) / 2.);
+    vec2 sweep = cis(triplestair(t, 4.));
     
     // at lightness 51, an RGB monitor can display all colors with chroma <=
     // 29.94. you can verify this with the `chromawheel` function in
-    // `find-chromasphere.jl`. a square with half-side 21 fits comfortably
-    // within that wheel
-    vec3 sky_color = lab2rgb(vec3(51., 21.*easing));
+    // `find-chromasphere.jl`. hat tip to Math.SE user joeytwiddle for the
+    // smooth stair function
+    //
+    //   https://math.stackexchange.com/a/2970318/16063
+    //
+    vec3 sky_color = lab2rgb(vec3(51., 29.94*sweep));
     
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
@@ -205,13 +221,13 @@ vec3 ray_color(vec3 place, vec3 dir) {
         aug_dist poly;
         float selector = mod(time, 40.);
         if (selector < 10.) {
-            poly = cube_sdf(p_scene);
+            poly = cube_sdf(p_scene, 1.-pop);
         } else if (selector < 20.) {
-            poly = octa_sdf(p_scene);
+            poly = octa_sdf(p_scene, 1.-pop);
         } else if (selector < 30.) {
-            poly = dodeca_sdf(p_scene);
+            poly = dodeca_sdf(p_scene, 1.-pop);
         } else {
-            poly = icosa_sdf(p_scene);
+            poly = icosa_sdf(p_scene, 1.-pop);
         }
         if (poly.dist < eps) {
             return radiance(poly, sky_color);

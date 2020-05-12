@@ -240,6 +240,7 @@ const vec3 light = vec3(1.0);
 vec3 ray_color(vec3 place, vec3 dir) {
     // easing function
     float t = time*PI2/40.;
+    float waver = (1.+cos(4.*t))/2.;
     float pop = quart((1. + cos(4.*t)) / 2.);
     vec2 sweep = cis(triplestair(t, 4.));
     
@@ -255,10 +256,10 @@ vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
         vec3 p_scene = place + r*dir;
-        aug_dist poly = tetra_sdf(p_scene, 0.4, dark);
+        aug_dist poly = cube_sdf(p_scene, waver, dark);
         float selector = mod(time, 40.);
         if (selector < 10.) {
-            poly = min(poly, cube_sdf(p_scene, 1.-pop, light));
+            poly = min(poly, tetra_sdf(p_scene, 1.-pop, light));
         } else if (selector < 20.) {
             poly = min(poly, octa_sdf(p_scene, 1.-pop,  light));
         } else if (selector < 30.) {

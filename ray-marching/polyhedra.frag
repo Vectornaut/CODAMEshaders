@@ -39,8 +39,6 @@ aug_dist max(aug_dist a, aug_dist b) {
 
 // --- polyhedra ---
 
-const vec3 poly_color = vec3(1.0);
-
 vec3 msign(vec3 v) {
     return vec3(
         v.x > 0. ? 1. : -1.,
@@ -53,16 +51,16 @@ float argmax(vec3 v) {
    return max(v.x, max(v.y, v.z));
 }
 
-aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
+aug_dist plane_sdf(vec3 p, vec3 normal, float offset, vec3 color) {
     return aug_dist(
         dot(p, normal) - offset,
         normal,
-        poly_color
+        color
     );
 }
 
-// a tetrahedron with the given midradius
-aug_dist tetra_sdf(vec3 p_scene, float midradius) {
+// tetrahedron
+aug_dist tetra_sdf(vec3 p_scene, float midradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -76,21 +74,21 @@ aug_dist tetra_sdf(vec3 p_scene, float midradius) {
     
     // find the side closest to p
     float inradius = midradius / sqrt(3.);
-    aug_dist dist =  plane_sdf(p, normals[0], inradius);
+    aug_dist dist =  plane_sdf(p, normals[0], inradius, color);
     for (int j = 1; j < 4; j++) {
-        dist = max(dist, plane_sdf(p, normals[j], inradius));
+        dist = max(dist, plane_sdf(p, normals[j], inradius, color));
     }
     dist.normal = orient * dist.normal;
     return dist;
 }
 
-// a cube with the given midradius. inspired by Inigo Quilez's box SDF,
+// cube. inspired by Inigo Quilez's box SDF,
 //
 //   https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
 //   https://www.iquilezles.org/www/articles/boxfunctions/boxfunctions.htm
 //
 // but different. in particular, this one is only a bound
-aug_dist cube_sdf(vec3 p_scene, float midradius) {
+aug_dist cube_sdf(vec3 p_scene, float midradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -106,12 +104,12 @@ aug_dist cube_sdf(vec3 p_scene, float midradius) {
     return aug_dist(
         argmax(p_abs - vec3(inradius)),
         orient * normal,
-        poly_color
+        color
     );
 }
 
-// an octahedron with the given midradius
-aug_dist octa_sdf(vec3 p_scene, float midradius) {
+// octahedron
+aug_dist octa_sdf(vec3 p_scene, float midradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -124,15 +122,15 @@ aug_dist octa_sdf(vec3 p_scene, float midradius) {
     
     // now it's the normal of the side closest to p
     float inradius = sqrt(2./3.) * midradius;
-    aug_dist dist = plane_sdf(p, normal, inradius);
+    aug_dist dist = plane_sdf(p, normal, inradius, color);
     dist.normal = orient * dist.normal;
     return dist;
 }
 
 const float phi = (1.+sqrt(5.))/2.;
 
-// a dodecahedron with the given midradius
-aug_dist dodeca_sdf(vec3 p_scene, float midradius) {
+// dodecahedron
+aug_dist dodeca_sdf(vec3 p_scene, float midradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -150,15 +148,15 @@ aug_dist dodeca_sdf(vec3 p_scene, float midradius) {
     
     // now, one of them is the normal of the side closest to p
     float inradius = midradius / sqrt(3.-phi);
-    aug_dist dist =  plane_sdf(p, normals[0], inradius);
-    dist = max(dist, plane_sdf(p, normals[1], inradius));
-    dist = max(dist, plane_sdf(p, normals[2], inradius));
+    aug_dist dist =  plane_sdf(p, normals[0], inradius, color);
+    dist = max(dist, plane_sdf(p, normals[1], inradius, color));
+    dist = max(dist, plane_sdf(p, normals[2], inradius, color));
     dist.normal = orient * dist.normal;
     return dist;
 }
 
-// an icosahedron with the given midradius
-aug_dist icosa_sdf(vec3 p_scene, float midradius) {
+// icosahedron
+aug_dist icosa_sdf(vec3 p_scene, float midradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -177,9 +175,9 @@ aug_dist icosa_sdf(vec3 p_scene, float midradius) {
     
     // now, one of them is the normal of the side closest to p
     float inradius = phi / sqrt(3.) * midradius;
-    aug_dist dist =  plane_sdf(p, normals[0], inradius);
+    aug_dist dist =  plane_sdf(p, normals[0], inradius, color);
     for (int j = 1; j < 4; j++) {
-        dist = max(dist, plane_sdf(p, normals[j], inradius));
+        dist = max(dist, plane_sdf(p, normals[j], inradius, color));
     }
     dist.normal = orient * dist.normal;
     return dist;
@@ -235,6 +233,10 @@ vec3 radiance(aug_dist dist, vec3 sky_color) {
     return mix(sky_color, dist.color, (1.+dot(dist.normal, vec3(1.0)/sqrt(3.0)))/2.);
 }
 
+const vec3 dark = vec3(0.5);
+
+const vec3 light = vec3(1.0);
+
 vec3 ray_color(vec3 place, vec3 dir) {
     // easing function
     float t = time*PI2/40.;
@@ -253,16 +255,16 @@ vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
         vec3 p_scene = place + r*dir;
-        aug_dist poly;
+        aug_dist poly = tetra_sdf(p_scene, 0.4, dark);
         float selector = mod(time, 40.);
         if (selector < 10.) {
-            poly = cube_sdf(p_scene, 1.-pop);
+            poly = min(poly, cube_sdf(p_scene, 1.-pop, light));
         } else if (selector < 20.) {
-            poly = octa_sdf(p_scene, 1.-pop);
+            poly = min(poly, octa_sdf(p_scene, 1.-pop,  light));
         } else if (selector < 30.) {
-            poly = dodeca_sdf(p_scene, 1.-pop);
+            poly = min(poly, dodeca_sdf(p_scene, 1.-pop, light));
         } else {
-            poly = icosa_sdf(p_scene, 1.-pop);
+            poly = min(poly, icosa_sdf(p_scene, 1.-pop, light));
         }
         if (poly.dist < eps) {
             return radiance(poly, sky_color);

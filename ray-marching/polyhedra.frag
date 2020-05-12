@@ -57,13 +57,13 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
     );
 }
 
-// inspired by Inigo Quilez's box SDF,
+// a cube with the given midradius. inspired by Inigo Quilez's box SDF,
 //
 //   https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
 //   https://www.iquilezles.org/www/articles/boxfunctions/boxfunctions.htm
 //
 // but different. in particular, this one is only a bound
-aug_dist cube_sdf(vec3 p_scene, float size) {
+aug_dist cube_sdf(vec3 p_scene, float midradius) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -74,6 +74,8 @@ aug_dist cube_sdf(vec3 p_scene, float size) {
         p_abs.y >= p_abs.z && p_abs.y >= p_abs.x ? 1. : 0.,
         p_abs.z >= p_abs.x && p_abs.z >= p_abs.y ? 1. : 0.
     );
+    
+    float inradius = midradius / sqrt(2.);
     return aug_dist(
         argmax(p_abs - vec3(size)),
         orient * normal,
@@ -81,7 +83,8 @@ aug_dist cube_sdf(vec3 p_scene, float size) {
     );
 }
 
-aug_dist octa_sdf(vec3 p_scene, float size) {
+// an octahedron with the given midradius
+aug_dist octa_sdf(vec3 p_scene, float midradius) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -93,14 +96,16 @@ aug_dist octa_sdf(vec3 p_scene, float size) {
     normal *= msign(p);
     
     // now it's the normal of the side closest to p
-    aug_dist dist = plane_sdf(p, normal, size);
+    float inradius = sqrt(2./3.) * midradius;
+    aug_dist dist = plane_sdf(p, normal, inradius);
     dist.normal = orient * dist.normal;
     return dist;
 }
 
 const float phi = (1.+sqrt(5.))/2.;
 
-aug_dist dodeca_sdf(vec3 p_scene, float size) {
+// a dodecahedron with the given midradius
+aug_dist dodeca_sdf(vec3 p_scene, float midradius) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -117,14 +122,16 @@ aug_dist dodeca_sdf(vec3 p_scene, float size) {
     }
     
     // now, one of them is the normal of the side closest to p
-    aug_dist dist =  plane_sdf(p, normals[0], size);
-    dist = max(dist, plane_sdf(p, normals[1], size));
-    dist = max(dist, plane_sdf(p, normals[2], size));
+    float inradius = midradius / sqrt(3.-phi);
+    aug_dist dist =  plane_sdf(p, normals[0], inradius);
+    dist = max(dist, plane_sdf(p, normals[1], inradius));
+    dist = max(dist, plane_sdf(p, normals[2], inradius));
     dist.normal = orient * dist.normal;
     return dist;
 }
 
-aug_dist icosa_sdf(vec3 p_scene, float size) {
+// an icosahedron with the given midradius
+aug_dist icosa_sdf(vec3 p_scene, float midradius) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -142,9 +149,10 @@ aug_dist icosa_sdf(vec3 p_scene, float size) {
     }
     
     // now, one of them is the normal of the side closest to p
-    aug_dist dist =  plane_sdf(p, normals[0], size);
+    float inradius = phi / sqrt(3.) * midradius;
+    aug_dist dist =  plane_sdf(p, normals[0], inradius);
     for (int j = 1; j < 4; j++) {
-        dist = max(dist, plane_sdf(p, normals[j], size));
+        dist = max(dist, plane_sdf(p, normals[j], inradius));
     }
     dist.normal = orient * dist.normal;
     return dist;

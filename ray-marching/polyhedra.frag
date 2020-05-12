@@ -29,6 +29,10 @@ struct aug_dist {
     vec3 color;
 };
 
+aug_dist min(aug_dist a, aug_dist b) {
+    if (a.dist < b.dist) return a; else return b;
+}
+
 aug_dist max(aug_dist a, aug_dist b) {
     if (a.dist > b.dist) return a; else return b;
 }
@@ -57,6 +61,29 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset) {
     );
 }
 
+// a tetrahedron with the given midradius
+aug_dist tetra_sdf(vec3 p_scene, float midradius) {
+    vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
+    mat3 orient = euler_rot(attitude);
+    vec3 p = p_scene * orient; // = transpose(orient) * p_scene
+    
+    // write down normals
+    vec3 normals [4];
+    normals[0] = vec3(-1., -1., -1.) / sqrt(3.);
+    normals[1] = vec3(-1.,  1.,  1.) / sqrt(3.);
+    normals[2] = normals[1].zxy;
+    normals[3] = normals[2].zxy;
+    
+    // find the side closest to p
+    float inradius = midradius / sqrt(3.);
+    aug_dist dist =  plane_sdf(p, normals[0], inradius);
+    for (int j = 1; j < 4; j++) {
+        dist = max(dist, plane_sdf(p, normals[j], inradius));
+    }
+    dist.normal = orient * dist.normal;
+    return dist;
+}
+
 // a cube with the given midradius. inspired by Inigo Quilez's box SDF,
 //
 //   https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
@@ -77,7 +104,7 @@ aug_dist cube_sdf(vec3 p_scene, float midradius) {
     
     float inradius = midradius / sqrt(2.);
     return aug_dist(
-        argmax(p_abs - vec3(size)),
+        argmax(p_abs - vec3(inradius)),
         orient * normal,
         poly_color
     );

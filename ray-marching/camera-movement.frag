@@ -42,8 +42,9 @@ void main() {
     vec3 screen_dir = vec3(uv(), -1.);
     screen_dir /= length(screen_dir);
     
-    // build camera frame from a desired direction
-    vec3 cam_bwd = -vec3(0.3*cos(time), 0.3, -1.);
+    // build a camera frame from a desired direction. based on the `lookAt`
+    // function from the checkpoint code
+    vec3 cam_bwd = -vec3(0.2*(mouse.xy/resolution.y - vec2(1.)), -1.);
     cam_bwd /= length(cam_bwd);
     vec3 cam_up = normalize(cross(cam_bwd, vec3(1., 0., 0.)));
     vec3 cam_right = normalize(cross(cam_up, cam_bwd));

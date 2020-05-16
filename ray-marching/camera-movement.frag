@@ -39,9 +39,17 @@ vec3 ray_color(vec3 eye, vec3 dir) {
 }
 
 void main() {
-    vec3 dir = vec3(uv(), -1.);
-    dir /= length(dir);
-    vec3 eye = vec3(0., 0., 1. - time);
-    vec3 color = vec3(ray_color(eye, dir));
+    vec3 screen_dir = vec3(uv(), -1.);
+    screen_dir /= length(screen_dir);
+    
+    // build camera frame from a desired direction
+    vec3 cam_bwd = -vec3(0.3*cos(time), 0.3, -1.);
+    cam_bwd /= length(cam_bwd);
+    vec3 cam_up = normalize(cross(cam_bwd, vec3(1., 0., 0.)));
+    vec3 cam_right = normalize(cross(cam_up, cam_bwd));
+    vec3 ray_dir = mat3(cam_right, cam_up, cam_bwd) * screen_dir;
+    
+    vec3 p_cam = vec3(0., 0., 1. - time);
+    vec3 color = vec3(ray_color(p_cam, ray_dir));
     gl_FragColor = vec4(color, 0.);
 }

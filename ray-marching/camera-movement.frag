@@ -47,7 +47,7 @@ vec3 ray_origin(float t) {
 
 vec3 ray_dir(vec2 screen_pt, float t) {
     // let's pretend the camera's on an airplane. roll to put the thrust + lift
-    // vector is in the span of the yaw and roll axes for a perfect banked turn
+    // vector in the span of the yaw and roll axes for a perfect banked turn
     const float step = 0.2;
     const vec3 gravity = vec3(0., -120., 0.);
     vec3 roll_ax = normalize(ray_origin(t+step) - ray_origin(t-step));

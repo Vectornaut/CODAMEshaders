@@ -88,7 +88,7 @@ vec3 ray_color(vec3 eye, vec3 dir) {
     return vec3(0., 1., 0.);
 }
 
-vec3 cam_pos(float t) {
+/*vec3 cam_pos(float t) {
     return vec3(
         4.5*(sin(t) + 2.*sin(2.*t)),
         1. + sin(3.*t),
@@ -110,16 +110,22 @@ vec3 cam_accel(float t) {
         1. + 9.*cos(3.*t),
         4.5*(cos(t) - 8.*cos(2.*t))
     );
-}
+}*/
+
+vec3 cam_pos(float t) { return vec3(0., t, t); }
+
+vec3 cam_vel(float t) { return vec3(0., 1., 1.); }
+
+vec3 cam_accel(float t) { return vec3(0.); }
 
 vec3 ray_dir(vec2 screen_pt, float t) {
-    // let's pretend the camera's on an airplane. roll to put the thrust + lift
-    // vector in the span of the yaw and roll axes for a perfect banked turn
+    // let's pretend the camera's on an airplane. point the yaw axis along the
+    // lift vector for a perfect banked turn
     const vec3 gravity = vec3(0., -120., 0.);
     vec3 roll_ax = normalize(cam_vel(t));
-    vec3 accel = cam_accel(t);
-    vec3 tras_accel = accel - dot(roll_ax, accel)*roll_ax;
-    vec3 yaw_ax = normalize(tras_accel - gravity);
+    vec3 thrust_lift = cam_accel(t) - gravity;
+    vec3 lift = thrust_lift - dot(roll_ax, thrust_lift)*roll_ax;
+    vec3 yaw_ax = normalize(lift);
     vec3 pitch_ax = cross(roll_ax, yaw_ax);
     
     vec3 screen_dir = normalize(vec3(uv(), -1.));

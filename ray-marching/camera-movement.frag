@@ -37,7 +37,7 @@ vec3 ray_color(vec3 eye, vec3 dir) {
     return vec3(0.);
 }
 
-vec3 ray_origin(float t) {
+vec3 cam_pos(float t) {
     return vec3(
         4.5*(sin(t) + 2.*sin(2.*t)),
         1. + sin(3.*t),
@@ -45,13 +45,28 @@ vec3 ray_origin(float t) {
     );
 }
 
+vec3 cam_vel(float t) {
+    return vec3(
+        4.5*(cos(t) + 4.*cos(2.*t)),
+        1. + 3.*cos(3.*t),
+        4.5*(sin(t) - 4.*sin(2.*t))
+    );
+}
+
+vec3 cam_accel(float t) {
+    return vec3(
+        4.5*(-sin(t) - 8.*sin(2.*t)),
+        1. + 9.*cos(3.*t),
+        4.5*(cos(t) - 8.*cos(2.*t))
+    );
+}
+
 vec3 ray_dir(vec2 screen_pt, float t) {
     // let's pretend the camera's on an airplane. roll to put the thrust + lift
     // vector in the span of the yaw and roll axes for a perfect banked turn
-    const float step = 0.2;
     const vec3 gravity = vec3(0., -120., 0.);
-    vec3 roll_ax = normalize(ray_origin(t+step) - ray_origin(t-step));
-    vec3 accel = (ray_origin(t+step) - 2.*ray_origin(t) + ray_origin(t-step)) / (step*step);
+    vec3 roll_ax = normalize(cam_vel(t));
+    vec3 accel = cam_accel(t);
     vec3 tras_accel = accel - dot(roll_ax, accel)*roll_ax;
     vec3 yaw_ax = normalize(tras_accel - gravity);
     vec3 pitch_ax = cross(roll_ax, yaw_ax);
@@ -62,8 +77,8 @@ vec3 ray_dir(vec2 screen_pt, float t) {
 
 void main() {
     vec3 screen_dir = normalize(vec3(uv(), -1.));
-    vec3 origin = ray_origin(time/8.);
+    vec3 pos = cam_pos(time/8.);
     vec3 dir = ray_dir(uv(), time/8.);
-    vec3 color = ray_color(origin, dir);
+    vec3 color = ray_color(pos, dir);
     gl_FragColor = vec4(color, 0.);
 }

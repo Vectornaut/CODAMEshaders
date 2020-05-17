@@ -3,11 +3,10 @@ float sphere(vec3 p) {
 }
 
 float ground(vec3 p) {
-    return p.y + 1.;// - 0.1*(sin(10.*p.x) + sin(10.*p.z)) + 1.;
+    return p.y + 1.;
 }
 
 float scene(vec3 p) {
-    //return sphere(p);
     return min(sphere(p), ground(p));
 }
 
@@ -39,13 +38,11 @@ vec3 ray_color(vec3 eye, vec3 dir) {
 }
 
 void main() {
-    vec3 screen_dir = vec3(uv(), -1.);
-    screen_dir /= length(screen_dir);
+    vec3 screen_dir = normalize(vec3(uv(), -1.));
     
     // build a camera frame from a desired direction. based on the `lookAt`
     // function from the checkpoint code
-    vec3 cam_bwd = -vec3(0.2*(mouse.xy/resolution.y - vec2(1.)), -1.);
-    cam_bwd /= length(cam_bwd);
+    vec3 cam_bwd = -normalize(vec3(0.2*(mouse.xy/resolution.y - vec2(1.)), -1.));
     vec3 cam_up = normalize(cross(cam_bwd, vec3(1., 0., 0.)));
     vec3 cam_right = normalize(cross(cam_up, cam_bwd));
     vec3 ray_dir = mat3(cam_right, cam_up, cam_bwd) * screen_dir;

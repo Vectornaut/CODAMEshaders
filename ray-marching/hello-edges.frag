@@ -14,8 +14,7 @@ float sphere_sdf(vec3 pos) {
 const vec3 ground_color = vec3(1.0);
 
 vec3 sphere_normal(vec3 pos) {
-    vec3 n = pos - sphere_pos;
-    return n / length(n);
+    return normalize(pos - sphere_pos);
 }
 
 float ground_sdf(vec3 pos) {
@@ -24,12 +23,11 @@ float ground_sdf(vec3 pos) {
 }
 
 vec3 ground_normal(vec3 pos) {
-    vec3 n = vec3(
+    return normalize(vec3(
         cos(5.*pos.x) / 2.,
         1.,
         -sin(5.*pos.z) / 2.
-    );
-    return n / length(n);
+    ));
 }
 
 // --- marcher ---
@@ -87,7 +85,6 @@ vec3 ray_color(vec3 dir) {
 // --- main ---
 
 void main() {
-    vec3 dir = vec3(uv(), -1.0);
-    dir /= length(dir);
+    vec3 dir = normalize(vec3(uv(), -1.0));
     gl_FragColor = vec4(ray_color(dir), 1.0);
 }

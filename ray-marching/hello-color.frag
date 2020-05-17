@@ -54,7 +54,6 @@ vec3 ray_color(vec3 dir) {
 // --- main ---
 
 void main() {
-    vec3 dir = vec3(uv(), -1.0);
-    dir /= length(dir);
+    vec3 dir = normalize(vec3(uv(), -1.0));
     gl_FragColor = vec4(ray_color(dir), 1.0);
 }

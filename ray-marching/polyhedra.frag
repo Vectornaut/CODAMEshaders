@@ -287,8 +287,7 @@ void main() {
     vec3 color_sum = vec3(0.);
     for (int sgn_x = 0; sgn_x < 2; sgn_x++) {
         for (int sgn_y = 0; sgn_y < 2; sgn_y++) {
-            vec3 dir = vec3(uv() + jiggle, -3.5);
-            dir /= length(dir);
+            vec3 dir = normalize(vec3(uv() + jiggle, -3.5));
             color_sum += ray_color(place, dir);
             jiggle.y = -jiggle.y;
         }

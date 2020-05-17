@@ -89,8 +89,16 @@ vec3 ray_color(vec3 eye, vec3 dir) {
 }
 
 void main() {
-    vec3 dir = normalize(vec3(uv(), -1.));
-    vec3 eye = vec3(0., 0., -0.5*time);
-    vec3 color = vec3(ray_color(eye, dir));
-    gl_FragColor = vec4(color, 0.);
+    vec3 place = vec3(0., 0., -0.5*time);
+    vec2 jiggle = vec2(0.5/resolution.y);
+    vec3 color_sum = vec3(0.);
+    for (int sgn_x = 0; sgn_x < 2; sgn_x++) {
+        for (int sgn_y = 0; sgn_y < 2; sgn_y++) {
+            vec3 dir = normalize(vec3(uv() + jiggle, -1.));
+            color_sum += ray_color(place, dir);
+            jiggle.y = -jiggle.y;
+        }
+        jiggle.x = -jiggle.x;
+    }
+    gl_FragColor = vec4(color_sum/4., 1.);
 }

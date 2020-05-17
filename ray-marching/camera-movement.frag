@@ -43,8 +43,9 @@ vec3 ray_origin(float t) {
 
 vec3 ray_dir(vec2 screen_pt, float t) {
     // find the Frenet frame of the camera path
-    vec3 tangent = vec3(-sin(t), 0., -cos(t));
-    vec3 normal = vec3(-cos(t), 0., sin(t));
+    const float step = 0.1;
+    vec3 tangent = normalize(ray_origin(t+step) - ray_origin(t-step));
+    vec3 normal = normalize(ray_origin(t+step) - 2.*ray_origin(t) + ray_origin(t-step));
     vec3 binormal = cross(tangent, normal);
     
     vec3 screen_dir = normalize(vec3(uv(), -1.));

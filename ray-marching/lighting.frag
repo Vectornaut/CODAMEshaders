@@ -25,9 +25,20 @@ const int steps = 256;
 const float horizon = 30.;
 
 vec3 sky_color = vec3(0.0, 0.2, 0.3);
+vec3 light_color = vec3(1.);
+vec3 light_dir = normalize(vec3(1.0, -0.5, -1.0));
 
-vec3 radiance(vec3 color, vec3 normal) {
-    return mix(sky_color, color, (1.+dot(normal, vec3(1.0)/sqrt(3.0)))/2.);
+float dotplus(vec3 a, vec3 b) { return max(dot(a, b), 0.); }
+
+vec3 radiance(vec3 color, vec3 normal, vec3 view_dir) {
+    vec3 ambient = color * sky_color;
+    vec3 diffuse = color * light_color * dotplus(-normal, light_dir);
+    
+    // `spec_dir` is the viewing direction with the strongest specular highlight
+    vec3 spec_dir = -reflect(light_dir, normal);
+    vec3 specular = light_color * pow(dotplus(view_dir, spec_dir), 32.);
+    
+    return ambient + diffuse + specular;
 }
 
 vec3 ray_color(vec3 eye, vec3 dir) {
@@ -42,7 +53,7 @@ vec3 ray_color(vec3 eye, vec3 dir) {
         // march
         if (dist < eps) {
             vec3 normal = normalize(scene_grad(p));
-            vec3 rad = radiance(vec3(1.), normal);
+            vec3 rad = radiance(vec3(1.0, 0.4, 0.5), normal, dir);
             return mix(sky_color, rad, exp(-0.2*r));
         } else if (r > horizon) {
             return sky_color;

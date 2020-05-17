@@ -174,7 +174,7 @@ aug_dist icosa_sdf(vec3 p_scene, float midradius, vec3 color) {
     }
     
     // now, one of them is the normal of the side closest to p
-    float inradius = phi / sqrt(3.) * midradius;
+    float inradius = midradius * phi / sqrt(3.);
     aug_dist dist =  plane_sdf(p, normals[0], inradius, color);
     for (int j = 1; j < 4; j++) {
         dist = max(dist, plane_sdf(p, normals[j], inradius, color));
@@ -280,7 +280,7 @@ vec3 ray_color(vec3 place, vec3 dir) {
 
 // --- main ---
 
-const vec3 place = vec3(0.0, 0.0, 6.0);
+const vec3 place = vec3(0., 0., 7.);
 
 void main() {
     vec2 jiggle = vec2(0.5/resolution.y);

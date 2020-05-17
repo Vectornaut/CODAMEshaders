@@ -38,12 +38,16 @@ vec3 ray_color(vec3 eye, vec3 dir) {
 }
 
 vec3 ray_origin(float t) {
-    return 20.*vec3(cos(t), 0., -sin(t));
+    return vec3(
+        4.5*(sin(t) + 2.*sin(2.*t)),
+        1. + sin(3.*t),
+        4.5*(-cos(t) + 2.*cos(2.*t))
+    );
 }
 
 vec3 ray_dir(vec2 screen_pt, float t) {
     // find the Frenet frame of the camera path
-    const float step = 0.1;
+    const float step = 0.2;
     vec3 tangent = normalize(ray_origin(t+step) - ray_origin(t-step));
     vec3 normal = normalize(ray_origin(t+step) - 2.*ray_origin(t) + ray_origin(t-step));
     vec3 binormal = cross(tangent, normal);

@@ -37,17 +37,24 @@ vec3 ray_color(vec3 eye, vec3 dir) {
     return vec3(0.);
 }
 
+vec3 ray_origin(float t) {
+    return 20.*vec3(cos(t), 0., -sin(t));
+}
+
+vec3 ray_dir(vec2 screen_pt, float t) {
+    // find the Frenet frame of the camera path
+    vec3 tangent = vec3(-sin(t), 0., -cos(t));
+    vec3 normal = vec3(-cos(t), 0., sin(t));
+    vec3 binormal = cross(tangent, normal);
+    
+    vec3 screen_dir = normalize(vec3(uv(), -1.));
+    return mat3(-normal, binormal, -tangent) * screen_dir;
+}
+
 void main() {
     vec3 screen_dir = normalize(vec3(uv(), -1.));
-    
-    // build a camera frame from a desired direction. based on the `lookAt`
-    // function from the checkpoint code
-    vec3 cam_bwd = -normalize(vec3(0.2*(mouse.xy/resolution.y - vec2(1.)), -1.));
-    vec3 cam_up = normalize(cross(cam_bwd, vec3(1., 0., 0.)));
-    vec3 cam_right = normalize(cross(cam_up, cam_bwd));
-    vec3 ray_dir = mat3(cam_right, cam_up, cam_bwd) * screen_dir;
-    
-    vec3 p_cam = vec3(0., 0., 1. - time);
-    vec3 color = vec3(ray_color(p_cam, ray_dir));
+    vec3 origin = ray_origin(time/8.);
+    vec3 dir = ray_dir(uv(), time/8.);
+    vec3 color = ray_color(origin, dir);
     gl_FragColor = vec4(color, 0.);
 }

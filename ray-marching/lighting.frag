@@ -25,9 +25,12 @@ const int steps = 1024;
 const float horizon = 60.;
 const float dust_horizon = 30.;
 
+const float SQRT2 = sqrt(2.);
+const float SQRT3 = sqrt(3.);
+
 vec3 sky_color = vec3(0.0, 0.2, 0.3);
 vec3 sun_color = vec3(1.);
-vec3 sun_dir = normalize(vec3(cos(time/sqrt(2.)), -0.5, sin(time/sqrt(2.))));
+vec3 sun_dir = normalize(vec3(cos(time/SQRT2), -0.5, sin(time/SQRT2)));
 
 float dotplus(vec3 a, vec3 b) { return max(dot(a, b), 0.); }
 
@@ -36,7 +39,7 @@ vec3 skylight(vec3 dir) {
     if (sun_cos > 0.99999) {
         return sun_color;
     } else {
-        return mix(sky_color, sun_color, 0.3*exp(5.*(sun_cos*sun_cos - 1.)));
+        return mix(sky_color, sun_color, 0.4*exp(4.*(sun_cos*sun_cos - 1.)));
     }
 }
 
@@ -89,15 +92,15 @@ vec3 ray_color(vec3 eye, vec3 dir) {
 }
 
 vec3 cam_pos(float t) {
-    return vec3(sqrt(3.)*sin(t), (1.+sin(2.*t)), 4.*t);
+    return vec3(SQRT3*sin(t), (1.+sin(2.*t)), 6.*t);
 }
 
 vec3 cam_vel(float t) {
-    return vec3(sqrt(3.)*cos(t), 2.*cos(2.*t), 4.);
+    return vec3(SQRT3*cos(t), 2.*cos(2.*t), 6.);
 }
 
 vec3 cam_accel(float t) {
-    return vec3(-sqrt(3.)*sin(t), -4.*sin(2.*t), 0.);
+    return vec3(-SQRT3*sin(t), -4.*sin(2.*t), 0.);
 }
 
 vec3 ray_dir(vec2 screen_pt, float t) {
@@ -115,7 +118,7 @@ vec3 ray_dir(vec2 screen_pt, float t) {
 }
 
 void main() {
-    float t = time/4.;
+    float t = time/6.;
     vec3 pos = cam_pos(t);
     vec2 jiggle = vec2(0.5/resolution.y);
     vec3 color_sum = vec3(0.);

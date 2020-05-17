@@ -3,7 +3,7 @@ float sphere(vec3 p) {
 }
 
 float ground(vec3 p) {
-    return p.y + 1.;
+    return p.y - 0.1*(cos(PI*p.x) + cos(PI*p.z)) + 1.1;
 }
 
 float scene(vec3 p) {
@@ -13,7 +13,7 @@ float scene(vec3 p) {
 const float eps = 0.001;
 
 vec3 scene_grad(vec3 p) {
-    vec2 step = vec2(eps, 0.);
+    vec2 step = vec2(0.02, 0.);
     return vec3(
         scene(p + step.stt) - scene(p - step.stt),
         scene(p + step.tst) - scene(p - step.tst),
@@ -21,7 +21,7 @@ vec3 scene_grad(vec3 p) {
     );
 }
 
-const int steps = 512;
+const int steps = 1024;
 const float horizon = 60.;
 const float dust_horizon = 30.;
 

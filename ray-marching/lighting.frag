@@ -27,7 +27,7 @@ const float dust_horizon = 30.;
 
 vec3 sky_color = vec3(0.0, 0.2, 0.3);
 vec3 sun_color = vec3(1.);
-vec3 sun_dir = normalize(vec3(cos(time/2.), -0.5, sin(time/2.)));
+vec3 sun_dir = normalize(vec3(cos(time/sqrt(2.)), -0.5, sin(time/sqrt(2.))));
 
 float dotplus(vec3 a, vec3 b) { return max(dot(a, b), 0.); }
 
@@ -88,35 +88,17 @@ vec3 ray_color(vec3 eye, vec3 dir) {
     return vec3(0., 1., 0.);
 }
 
-/*vec3 cam_pos(float t) {
-    return vec3(
-        4.5*(sin(t) + 2.*sin(2.*t)),
-        1. + sin(3.*t),
-        4.5*(-cos(t) + 2.*cos(2.*t))
-    );
+vec3 cam_pos(float t) {
+    return vec3(sqrt(3.)*sin(t), (1.+sin(2.*t)), 4.*t);
 }
 
 vec3 cam_vel(float t) {
-    return vec3(
-        4.5*(cos(t) + 4.*cos(2.*t)),
-        1. + 3.*cos(3.*t),
-        4.5*(sin(t) - 4.*sin(2.*t))
-    );
+    return vec3(sqrt(3.)*cos(t), 2.*cos(2.*t), 4.);
 }
 
 vec3 cam_accel(float t) {
-    return vec3(
-        4.5*(-sin(t) - 8.*sin(2.*t)),
-        1. + 9.*cos(3.*t),
-        4.5*(cos(t) - 8.*cos(2.*t))
-    );
-}*/
-
-vec3 cam_pos(float t) { return vec3(0., t, t); }
-
-vec3 cam_vel(float t) { return vec3(0., 1., 1.); }
-
-vec3 cam_accel(float t) { return vec3(0.); }
+    return vec3(-sqrt(3.)*sin(t), -4.*sin(2.*t), 0.);
+}
 
 vec3 ray_dir(vec2 screen_pt, float t) {
     // let's pretend the camera's on an airplane. point the yaw axis along the
@@ -133,7 +115,7 @@ vec3 ray_dir(vec2 screen_pt, float t) {
 }
 
 void main() {
-    float t = time/8.;
+    float t = time/4.;
     vec3 pos = cam_pos(t);
     vec2 jiggle = vec2(0.5/resolution.y);
     vec3 color_sum = vec3(0.);

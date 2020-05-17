@@ -88,14 +88,53 @@ vec3 ray_color(vec3 eye, vec3 dir) {
     return vec3(0., 1., 0.);
 }
 
+vec3 cam_pos(float t) {
+    return vec3(
+        4.5*(sin(t) + 2.*sin(2.*t)),
+        1. + sin(3.*t),
+        4.5*(-cos(t) + 2.*cos(2.*t))
+    );
+}
+
+vec3 cam_vel(float t) {
+    return vec3(
+        4.5*(cos(t) + 4.*cos(2.*t)),
+        1. + 3.*cos(3.*t),
+        4.5*(sin(t) - 4.*sin(2.*t))
+    );
+}
+
+vec3 cam_accel(float t) {
+    return vec3(
+        4.5*(-sin(t) - 8.*sin(2.*t)),
+        1. + 9.*cos(3.*t),
+        4.5*(cos(t) - 8.*cos(2.*t))
+    );
+}
+
+vec3 ray_dir(vec2 screen_pt, float t) {
+    // let's pretend the camera's on an airplane. roll to put the thrust + lift
+    // vector in the span of the yaw and roll axes for a perfect banked turn
+    const vec3 gravity = vec3(0., -120., 0.);
+    vec3 roll_ax = normalize(cam_vel(t));
+    vec3 accel = cam_accel(t);
+    vec3 tras_accel = accel - dot(roll_ax, accel)*roll_ax;
+    vec3 yaw_ax = normalize(tras_accel - gravity);
+    vec3 pitch_ax = cross(roll_ax, yaw_ax);
+    
+    vec3 screen_dir = normalize(vec3(uv(), -1.));
+    return mat3(pitch_ax, yaw_ax, -roll_ax) * screen_dir;
+}
+
 void main() {
-    vec3 place = vec3(0., 0., -0.5*time);
+    float t = time/8.;
+    vec3 pos = cam_pos(t);
     vec2 jiggle = vec2(0.5/resolution.y);
     vec3 color_sum = vec3(0.);
     for (int sgn_x = 0; sgn_x < 2; sgn_x++) {
         for (int sgn_y = 0; sgn_y < 2; sgn_y++) {
-            vec3 dir = normalize(vec3(uv() + jiggle, -1.));
-            color_sum += ray_color(place, dir);
+            vec3 dir = ray_dir(uv() + jiggle, t);
+            color_sum += ray_color(pos, dir);
             jiggle.y = -jiggle.y;
         }
         jiggle.x = -jiggle.x;

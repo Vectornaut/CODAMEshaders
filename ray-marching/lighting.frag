@@ -25,18 +25,18 @@ const int steps = 256;
 const float horizon = 30.;
 
 vec3 sky_color = vec3(0.0, 0.2, 0.3);
-vec3 light_color = vec3(1.);
-vec3 light_dir = normalize(vec3(1.0, -0.5, -1.0));
+vec3 sun_color = vec3(1.);
+vec3 sun_dir = normalize(vec3(cos(time/2.), -0.5, sin(time/2.)));
 
 float dotplus(vec3 a, vec3 b) { return max(dot(a, b), 0.); }
 
 vec3 radiance(vec3 color, vec3 normal, vec3 view_dir) {
     vec3 ambient = color * sky_color;
-    vec3 diffuse = color * light_color * dotplus(-normal, light_dir);
+    vec3 diffuse = color * sun_color * dotplus(-normal, sun_dir);
     
     // `spec_dir` is the viewing direction with the strongest specular highlight
-    vec3 spec_dir = -reflect(light_dir, normal);
-    vec3 specular = light_color * pow(dotplus(view_dir, spec_dir), 32.);
+    vec3 spec_dir = -reflect(sun_dir, normal);
+    vec3 specular = sun_color * pow(dotplus(view_dir, spec_dir), 32.);
     
     return ambient + diffuse + specular;
 }

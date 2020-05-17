@@ -46,14 +46,18 @@ vec3 ray_origin(float t) {
 }
 
 vec3 ray_dir(vec2 screen_pt, float t) {
-    // find the Frenet frame of the camera path
+    // let's pretend the camera's on an airplane. roll to put the thrust + lift
+    // vector is in the span of the yaw and roll axes, for a perfect banked turn
     const float step = 0.2;
-    vec3 tangent = normalize(ray_origin(t+step) - ray_origin(t-step));
-    vec3 normal = normalize(ray_origin(t+step) - 2.*ray_origin(t) + ray_origin(t-step));
-    vec3 binormal = cross(tangent, normal);
+    const vec3 gravity = vec3(0., -120., 0.);
+    vec3 roll_ax = normalize(ray_origin(t+step) - ray_origin(t-step));
+    vec3 accel = (ray_origin(t+step) - 2.*ray_origin(t) + ray_origin(t-step)) / (step*step);
+    vec3 tras_accel = accel - dot(roll_ax, accel)*roll_ax;
+    vec3 yaw_ax = normalize(tras_accel - gravity);
+    vec3 pitch_ax = cross(roll_ax, yaw_ax);
     
     vec3 screen_dir = normalize(vec3(uv(), -1.));
-    return mat3(-normal, binormal, -tangent) * screen_dir;
+    return mat3(pitch_ax, yaw_ax, -roll_ax) * screen_dir;
 }
 
 void main() {

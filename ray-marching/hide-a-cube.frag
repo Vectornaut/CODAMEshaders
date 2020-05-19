@@ -1,3 +1,12 @@
+// the cube is symmetric under reflection along the x, y, z axes. the octahedron
+// has the same symmetries. surprisingly, the dodecahedron and the icosahedron
+// have these symmetries too! i've used them to write short SDFs for all the
+// platonic solids
+//
+// (the octahedron, dodecahedron, and icosahedron also share the rotational
+// symmetries of the cube. the tetrahedron has half the symmetries of the cube,
+// because of the way it shares half the cube's vertices)
+
 // --- euler angles ---
 
 mat3 rot_xy(float t) {
@@ -265,7 +274,7 @@ vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
         vec3 p_scene = place + r*dir;
-        /*aug_dist poly = cube_sdf(p_scene, waver, dark);
+        aug_dist poly = cube_sdf(p_scene, waver, dark);
         float selector = mod(time, 40.);
         if (selector < 10.) {
             poly = min(poly, tetra_sdf(p_scene, r_tetra*(1.-pop), light));
@@ -275,24 +284,6 @@ vec3 ray_color(vec3 place, vec3 dir) {
             poly = min(poly, dodeca_sdf(p_scene, r_dodeca*(1.-pop), light));
         } else {
             poly = min(poly, icosa_sdf(p_scene, r_icosa*(1.-pop), light));
-        }*/
-        aug_dist poly = aug_dist(1e12, vec3(0.), vec3(0.));
-        float selector = mod(time, 30.);
-        if (selector < 20.) {
-            poly = min(poly, icosa_sdf(p_scene, r_icosa, light));
-            
-        }
-        if (10. < selector) {
-            poly = min(poly, cube_sdf(p_scene, 1., dark));
-            if (selector < 20.) {
-                poly = min(poly, tetra_sdf(p_scene, r_tetra, mint));
-            }
-        }
-        if (selector < 10. || 20. < selector) {
-            poly = min(poly, dodeca_sdf(p_scene, r_dodeca, mint));
-            if (20. < selector) {
-                poly = min(poly, octa_sdf(p_scene, r_octa,  light));
-            }
         }
         if (poly.dist < eps) {
             return radiance(poly, sky_color);

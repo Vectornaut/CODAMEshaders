@@ -59,6 +59,8 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset, vec3 color) {
     );
 }
 
+const float sqrt3 = sqrt(3.);
+
 // tetrahedron
 aug_dist tetra_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
@@ -67,8 +69,8 @@ aug_dist tetra_sdf(vec3 p_scene, float inradius, vec3 color) {
     
     // write down normals
     vec3 normals [4];
-    normals[0] = vec3(-1., -1., -1.) / sqrt(3.);
-    normals[1] = vec3(-1.,  1.,  1.) / sqrt(3.);
+    normals[0] = vec3(-1., -1., -1.) / sqrt3;
+    normals[1] = vec3(-1.,  1.,  1.) / sqrt3;
     normals[2] = normals[1].zxy;
     normals[3] = normals[2].zxy;
     
@@ -113,7 +115,7 @@ aug_dist octa_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
     // take the side normal in the positive orthant
-    vec3 normal = vec3(1.) / sqrt(3.);
+    vec3 normal = vec3(1.) / sqrt3;
     
     // reflect it into the orthant of p
     normal *= msign(p);
@@ -125,6 +127,7 @@ aug_dist octa_sdf(vec3 p_scene, float inradius, vec3 color) {
 }
 
 const float phi = (1.+sqrt(5.))/2.;
+const float hyp = sqrt(2.+phi); // = sqrt(1+phi^2)
 
 // dodecahedron
 aug_dist dodeca_sdf(vec3 p_scene, float inradius, vec3 color) {
@@ -134,7 +137,7 @@ aug_dist dodeca_sdf(vec3 p_scene, float inradius, vec3 color) {
     
     // take the side normals in the positive orthant
     vec3 normals [3];
-    normals[0] = vec3(0., 1., phi) / sqrt(2.+phi);
+    normals[0] = vec3(0., 1., phi) / hyp;
     normals[1] = normals[0].zxy;
     normals[2] = normals[1].zxy;
     
@@ -159,8 +162,8 @@ aug_dist icosa_sdf(vec3 p_scene, float inradius, vec3 color) {
     
     // take the side normals in the positive orthant
     vec3 normals [4];
-    normals[0] = vec3(1.) / sqrt(3.);
-    normals[1] = vec3(0., phi-1., phi) / sqrt(3.);
+    normals[0] = vec3(1.) / sqrt3;
+    normals[1] = vec3(0., phi-1., phi) / sqrt3;
     normals[2] = normals[1].zxy;
     normals[3] = normals[2].zxy;
     
@@ -225,18 +228,24 @@ float triplestair(float t, float n) {
 vec2 cis(float t) { return vec2(cos(t), sin(t)); }
 
 vec3 radiance(aug_dist dist, vec3 sky_color) {
-    return mix(sky_color, dist.color, (1.+dot(dist.normal, vec3(1.0)/sqrt(3.0)))/2.);
+    return mix(sky_color, dist.color, (1.+dot(dist.normal, vec3(1.)/sqrt3))/2.);
 }
 
 const vec3 dark = vec3(0.5);
 const vec3 mint = vec3(0.7, 0.9, 0.7);
 const vec3 light = vec3(1.0);
 
-// the scale factors are chosen so that when the polyhedra are at maximum size,
-// they interlock as follows (to a good approximation, at least):
+const float sqrt5 = 2.*phi-1.;
+
+// with these inradii, the platonic solids interlock as follows.
 // - the dodecahedron encages the icosahedron
 // - the icosahedron encages the tetrahedron and the cube
 // - the intersection of the cube and the dodecahedron encages the octahedron
+const float r_icosa = sqrt5/sqrt3;
+const float r_dodeca = sqrt5/(hyp*(phi-2./3.));
+const float r_octa = r_icosa/(phi-2./3.) - 1./(phi*sqrt3);
+const float r_tetra = 5.*(2./phi-1.)/sqrt3;
+
 vec3 ray_color(vec3 place, vec3 dir) {
     // easing function
     float t = time*PI2/40.;
@@ -259,30 +268,30 @@ vec3 ray_color(vec3 place, vec3 dir) {
         /*aug_dist poly = cube_sdf(p_scene, waver, dark);
         float selector = mod(time, 40.);
         if (selector < 10.) {
-            poly = min(poly, tetra_sdf(p_scene, (3./4.)*(10./11.)*(1.-pop), light));
+            poly = min(poly, tetra_sdf(p_scene, r_tetra*(1.-pop), light));
         } else if (selector < 20.) {
-            poly = min(poly, octa_sdf(p_scene, (5./12.)*(1.+sqrt(2.))*(1.-pop),  light));
+            poly = min(poly, octa_sdf(p_scene, r_octa*(1.-pop),  light));
         } else if (selector < 30.) {
-            poly = min(poly, dodeca_sdf(p_scene, sqrt(49./32.)*(1.-pop), light));
+            poly = min(poly, dodeca_sdf(p_scene, r_dodeca*(1.-pop), light));
         } else {
-            poly = min(poly, icosa_sdf(p_scene, sqrt(5./3.)*(1.-pop), light));
+            poly = min(poly, icosa_sdf(p_scene, r_icosa*(1.-pop), light));
         }*/
         aug_dist poly = aug_dist(1e12, vec3(0.), vec3(0.));
         float selector = mod(time, 30.);
         if (selector < 20.) {
-            poly = min(poly, icosa_sdf(p_scene, sqrt(5./3.), light));
+            poly = min(poly, icosa_sdf(p_scene, r_icosa, light));
             
         }
         if (10. < selector) {
             poly = min(poly, cube_sdf(p_scene, 1., dark));
             if (selector < 20.) {
-                poly = min(poly, tetra_sdf(p_scene, (3./4.)*(10./11.), mint));
+                poly = min(poly, tetra_sdf(p_scene, r_tetra, mint));
             }
         }
         if (selector < 10. || 20. < selector) {
-            poly = min(poly, dodeca_sdf(p_scene, sqrt(49./32.), mint));
+            poly = min(poly, dodeca_sdf(p_scene, r_dodeca, mint));
             if (20. < selector) {
-                poly = min(poly, octa_sdf(p_scene, (5./12.)*(1.+sqrt(2.)),  light));
+                poly = min(poly, octa_sdf(p_scene, r_octa,  light));
             }
         }
         if (poly.dist < eps) {

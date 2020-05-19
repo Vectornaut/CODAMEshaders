@@ -1,10 +1,7 @@
-// in this demo, the five platonic solids are be scaled so that they interlock
-// as follows:
+// in this demo, the five platonic solids are scaled to interlock as follows.
 // - the dodecahedron encages the icosahedron
 // - the icosahedron encages the tetrahedron and the cube
 // - the intersection of the cube and the dodecahedron encages the octahedron
-// the scale factors are just approximations, but they're nice enough numbers
-// that i wouldn't be surprised if some of them are exact
 
 // --- euler angles ---
 
@@ -67,6 +64,8 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset, vec3 color) {
     );
 }
 
+const float sqrt3 = sqrt(3.);
+
 // tetrahedron
 aug_dist tetra_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
@@ -75,8 +74,8 @@ aug_dist tetra_sdf(vec3 p_scene, float inradius, vec3 color) {
     
     // write down normals
     vec3 normals [4];
-    normals[0] = vec3(-1., -1., -1.) / sqrt(3.);
-    normals[1] = vec3(-1.,  1.,  1.) / sqrt(3.);
+    normals[0] = vec3(-1., -1., -1.) / sqrt3;
+    normals[1] = vec3(-1.,  1.,  1.) / sqrt3;
     normals[2] = normals[1].zxy;
     normals[3] = normals[2].zxy;
     
@@ -121,7 +120,7 @@ aug_dist octa_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
     
     // take the side normal in the positive orthant
-    vec3 normal = vec3(1.) / sqrt(3.);
+    vec3 normal = vec3(1.) / sqrt3;
     
     // reflect it into the orthant of p
     normal *= msign(p);
@@ -133,6 +132,7 @@ aug_dist octa_sdf(vec3 p_scene, float inradius, vec3 color) {
 }
 
 const float phi = (1.+sqrt(5.))/2.;
+const float hyp = sqrt(2.+phi); // = sqrt(1+phi^2)
 
 // dodecahedron
 aug_dist dodeca_sdf(vec3 p_scene, float inradius, vec3 color) {
@@ -142,7 +142,7 @@ aug_dist dodeca_sdf(vec3 p_scene, float inradius, vec3 color) {
     
     // take the side normals in the positive orthant
     vec3 normals [3];
-    normals[0] = vec3(0., 1., phi) / sqrt(2.+phi);
+    normals[0] = vec3(0., 1., phi) / hyp;
     normals[1] = normals[0].zxy;
     normals[2] = normals[1].zxy;
     
@@ -167,8 +167,8 @@ aug_dist icosa_sdf(vec3 p_scene, float inradius, vec3 color) {
     
     // take the side normals in the positive orthant
     vec3 normals [4];
-    normals[0] = vec3(1.) / sqrt(3.);
-    normals[1] = vec3(0., phi-1., phi) / sqrt(3.);
+    normals[0] = vec3(1.) / sqrt3;
+    normals[1] = vec3(0., phi-1., phi) / sqrt3;
     normals[2] = normals[1].zxy;
     normals[3] = normals[2].zxy;
     
@@ -209,13 +209,21 @@ float plateau(float t, float width) {
 }
 
 vec3 radiance(aug_dist dist, vec3 sky_color) {
-    return mix(sky_color, dist.color, (1.+dot(dist.normal, vec3(1.0)/sqrt(3.0)))/2.);
+    return mix(sky_color, dist.color, (1.+dot(dist.normal, vec3(1.)/sqrt3))/2.);
 }
 
 const vec3 sky_color = vec3(0.1, 0.1, 0.3);
 const vec3 dark = vec3(0.5);
 const vec3 neonlime = vec3(0.75, 0.90, 0.00);
 const vec3 light = vec3(1.0);
+
+const float sqrt5 = 2.*phi-1.;
+
+// with these inradii, the platonic solids interlock as desired
+const float r_icosa = sqrt5/sqrt3;
+const float r_dodeca = sqrt5/(hyp*(phi-2./3.));
+const float r_octa = r_icosa/(phi-2./3.) - 1./(phi*sqrt3);
+const float r_tetra = 5.*(2./phi-1.)/sqrt3;
 
 vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
@@ -230,11 +238,11 @@ vec3 ray_color(vec3 place, vec3 dir) {
         
         // find scene distance
         vec3 p_scene = place + r*dir;
-        aug_dist poly = dodeca_sdf(p_scene, sqrt(49./32.)*dodeca_pop, neonlime);
-        poly = min(poly, octa_sdf(p_scene, (5./12.)*(1.+sqrt(2.))*octa_pop,  light));
-        poly = min(poly, icosa_sdf(p_scene, (sqrt(5./3.) + eps)*icosa_pop, light));
-        poly = min(poly, cube_sdf(p_scene, cube_pop, dark));
-        poly = min(poly, tetra_sdf(p_scene, (3./4.)*(10./11.)*tetra_pop, neonlime));
+        aug_dist poly = dodeca_sdf(p_scene, r_dodeca * dodeca_pop, neonlime);
+        poly = min(poly, octa_sdf(p_scene, r_octa * octa_pop,  light));
+        poly = min(poly, icosa_sdf(p_scene, r_icosa * icosa_pop, light));
+        poly = min(poly, cube_sdf(p_scene, (1.-eps)*cube_pop, dark));
+        poly = min(poly, tetra_sdf(p_scene, r_tetra * tetra_pop, neonlime));
         
         // march
         if (poly.dist < eps) {

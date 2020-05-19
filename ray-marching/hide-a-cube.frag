@@ -60,7 +60,7 @@ aug_dist plane_sdf(vec3 p, vec3 normal, float offset, vec3 color) {
 }
 
 // tetrahedron
-aug_dist tetra_sdf(vec3 p_scene, float midradius, vec3 color) {
+aug_dist tetra_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -73,7 +73,6 @@ aug_dist tetra_sdf(vec3 p_scene, float midradius, vec3 color) {
     normals[3] = normals[2].zxy;
     
     // find the side closest to p
-    float inradius = midradius / sqrt(3.);
     aug_dist dist =  plane_sdf(p, normals[0], inradius, color);
     for (int j = 1; j < 4; j++) {
         dist = max(dist, plane_sdf(p, normals[j], inradius, color));
@@ -88,7 +87,7 @@ aug_dist tetra_sdf(vec3 p_scene, float midradius, vec3 color) {
 //   https://www.iquilezles.org/www/articles/boxfunctions/boxfunctions.htm
 //
 // but different. in particular, this one is only a bound
-aug_dist cube_sdf(vec3 p_scene, float midradius, vec3 color) {
+aug_dist cube_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -100,7 +99,6 @@ aug_dist cube_sdf(vec3 p_scene, float midradius, vec3 color) {
         p_abs.z >= p_abs.x && p_abs.z >= p_abs.y ? 1. : 0.
     );
     
-    float inradius = midradius / sqrt(2.);
     return aug_dist(
         argmax(p_abs - vec3(inradius)),
         orient * normal,
@@ -109,7 +107,7 @@ aug_dist cube_sdf(vec3 p_scene, float midradius, vec3 color) {
 }
 
 // octahedron
-aug_dist octa_sdf(vec3 p_scene, float midradius, vec3 color) {
+aug_dist octa_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -121,7 +119,6 @@ aug_dist octa_sdf(vec3 p_scene, float midradius, vec3 color) {
     normal *= msign(p);
     
     // now it's the normal of the side closest to p
-    float inradius = sqrt(2./3.) * midradius;
     aug_dist dist = plane_sdf(p, normal, inradius, color);
     dist.normal = orient * dist.normal;
     return dist;
@@ -130,7 +127,7 @@ aug_dist octa_sdf(vec3 p_scene, float midradius, vec3 color) {
 const float phi = (1.+sqrt(5.))/2.;
 
 // dodecahedron
-aug_dist dodeca_sdf(vec3 p_scene, float midradius, vec3 color) {
+aug_dist dodeca_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -147,7 +144,6 @@ aug_dist dodeca_sdf(vec3 p_scene, float midradius, vec3 color) {
     }
     
     // now, one of them is the normal of the side closest to p
-    float inradius = midradius / sqrt(3.-phi);
     aug_dist dist =  plane_sdf(p, normals[0], inradius, color);
     dist = max(dist, plane_sdf(p, normals[1], inradius, color));
     dist = max(dist, plane_sdf(p, normals[2], inradius, color));
@@ -156,7 +152,7 @@ aug_dist dodeca_sdf(vec3 p_scene, float midradius, vec3 color) {
 }
 
 // icosahedron
-aug_dist icosa_sdf(vec3 p_scene, float midradius, vec3 color) {
+aug_dist icosa_sdf(vec3 p_scene, float inradius, vec3 color) {
     vec3 attitude = vec3(1./(2.+PI), 1./PI, 1./2.) * vec3(time);
     mat3 orient = euler_rot(attitude);
     vec3 p = p_scene * orient; // = transpose(orient) * p_scene
@@ -174,7 +170,6 @@ aug_dist icosa_sdf(vec3 p_scene, float midradius, vec3 color) {
     }
     
     // now, one of them is the normal of the side closest to p
-    float inradius = midradius * phi / sqrt(3.);
     aug_dist dist =  plane_sdf(p, normals[0], inradius, color);
     for (int j = 1; j < 4; j++) {
         dist = max(dist, plane_sdf(p, normals[j], inradius, color));
@@ -234,9 +229,14 @@ vec3 radiance(aug_dist dist, vec3 sky_color) {
 }
 
 const vec3 dark = vec3(0.5);
-
+const vec3 mint = vec3(0.7, 0.9, 0.7);
 const vec3 light = vec3(1.0);
 
+// the scale factors are chosen so that when the polyhedra are at maximum size,
+// they interlock as follows (to a good approximation, at least):
+// - the dodecahedron encages the icosahedron
+// - the icosahedron encages the tetrahedron and the cube
+// - the intersection of the cube and the dodecahedron encages the octahedron
 vec3 ray_color(vec3 place, vec3 dir) {
     // easing function
     float t = time*PI2/40.;
@@ -256,16 +256,34 @@ vec3 ray_color(vec3 place, vec3 dir) {
     float r = 0.0;
     for (int step_cnt = 0; step_cnt < steps; step_cnt++) {
         vec3 p_scene = place + r*dir;
-        aug_dist poly = cube_sdf(p_scene, waver, dark);
+        /*aug_dist poly = cube_sdf(p_scene, waver, dark);
         float selector = mod(time, 40.);
         if (selector < 10.) {
-            poly = min(poly, tetra_sdf(p_scene, 1.-pop, light));
+            poly = min(poly, tetra_sdf(p_scene, (3./4.)*(10./11.)*(1.-pop), light));
         } else if (selector < 20.) {
-            poly = min(poly, octa_sdf(p_scene, 1.-pop,  light));
+            poly = min(poly, octa_sdf(p_scene, (5./12.)*(1.+sqrt(2.))*(1.-pop),  light));
         } else if (selector < 30.) {
-            poly = min(poly, dodeca_sdf(p_scene, 1.-pop, light));
+            poly = min(poly, dodeca_sdf(p_scene, sqrt(49./32.)*(1.-pop), light));
         } else {
-            poly = min(poly, icosa_sdf(p_scene, 1.-pop, light));
+            poly = min(poly, icosa_sdf(p_scene, sqrt(5./3.)*(1.-pop), light));
+        }*/
+        aug_dist poly = aug_dist(1e12, vec3(0.), vec3(0.));
+        float selector = mod(time, 30.);
+        if (selector < 20.) {
+            poly = min(poly, icosa_sdf(p_scene, sqrt(5./3.), light));
+            
+        }
+        if (10. < selector) {
+            poly = min(poly, cube_sdf(p_scene, 1., dark));
+            if (selector < 20.) {
+                poly = min(poly, tetra_sdf(p_scene, (3./4.)*(10./11.), mint));
+            }
+        }
+        if (selector < 10. || 20. < selector) {
+            poly = min(poly, dodeca_sdf(p_scene, sqrt(49./32.), mint));
+            if (20. < selector) {
+                poly = min(poly, octa_sdf(p_scene, (5./12.)*(1.+sqrt(2.)),  light));
+            }
         }
         if (poly.dist < eps) {
             return radiance(poly, sky_color);
@@ -280,7 +298,7 @@ vec3 ray_color(vec3 place, vec3 dir) {
 
 // --- main ---
 
-const vec3 place = vec3(0., 0., 7.);
+const vec3 place = vec3(0., 0., 9.);
 
 void main() {
     vec2 jiggle = vec2(0.5/resolution.y);

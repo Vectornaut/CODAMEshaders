@@ -1,3 +1,9 @@
+// playing with lighting and camera movement techniques from the may 16
+// "explorations in raymarching" workshop. i threw in two physics goodies. the
+// halo around the sun comes from a model for scattering off atmospheric haze.
+// the camera orientation is determined from the camera's path by pretending the
+// camera is on an airplane making perfectly banked turns
+
 float sphere(vec3 p) {
     return length(mod(p, vec3(2.)) - vec3(1., 1., 1.)) - 0.2;
 }

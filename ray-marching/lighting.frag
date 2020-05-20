@@ -28,18 +28,47 @@ const float dust_horizon = 30.;
 const float SQRT2 = sqrt(2.);
 const float SQRT3 = sqrt(3.);
 
-vec3 sky_color = vec3(0.0, 0.2, 0.3);
+// sky parameters
+const float g = 0.6; // scattering anisotropy. runs from 0 to 1
+const float h = (1.-g)/(1.+g); // the cube root of the scattering phase opposite the sun
+const float scat_frac = 0.4;
 vec3 sun_color = vec3(1.);
+vec3 sky_base = vec3(0.0, 0.2, 0.3);
+vec3 sky_color = mix(sky_base, sun_color, scat_frac*h*h*h);
 vec3 sun_dir = normalize(vec3(cos(time/SQRT2), -0.5, sin(time/SQRT2)));
 
 float dotplus(vec3 a, vec3 b) { return max(dot(a, b), 0.); }
 
+// if we're looking straight at the sun, we see the color of the sun. otherwise,
+// we see a mixture of Mie-scattered sunlight and other skylight.
+//
+// the angular size of the sun, as seen from Earth, is around acos(0.99999). the
+// sun looks small in the scene because we're using a very wide field of view.
+//
+// Mie scattering is scattering off large particles, like atmospheric haze. a
+// scattering process is described by its the phase function, which gives the
+// intensity of scattered light at each scattering angle. i'm using
+// Scratchapixel's approximate phase function for Mie scattering.
+//
+//   https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky
+//
+// i don't know where Scratchapixel got it from, but it's the product of the
+// Rayleigh scattering phase function and the Henyey-Greenstein phase function,
+// an approximate phase function for scattering off interstellar dust.
+//
+//   https://www.oceanopticsbook.info/index.php/view/scattering/the-henyey-greenstein-phase-function
+//
+//   L. G. Henyey and J. L. Greenstein. "Diffuse radiation in the galaxy"
+//   https://ui.adsabs.harvard.edu/abs/1941ApJ....93...70H/abstract
+//
 vec3 skylight(vec3 dir) {
     float sun_cos = dotplus(dir, -sun_dir);
     if (sun_cos > 0.99999) {
         return sun_color;
     } else {
-        return mix(sky_color, sun_color, 0.4*exp(4.*(sun_cos*sun_cos - 1.)));
+        float rayleigh_phase = (1.+sun_cos*sun_cos)/2.;
+        float hg_phase = pow((1.-g)*(1.-g) / (1. - 2.*g*sun_cos + g*g), 1.5);
+        return mix(sky_base, sun_color, scat_frac * rayleigh_phase * hg_phase);
     }
 }
 
